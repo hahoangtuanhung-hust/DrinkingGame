@@ -1,6 +1,6 @@
-import { ArrowRight, History, PencilLine, RotateCcw, Sparkles } from "lucide-react";
+import { ArrowRight, BookOpenText, Heart, History, PencilLine, RotateCcw, Shuffle, Sparkles, Star, Zap } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useSettingsStore } from "../settingsStore";
 import { Modal } from "../../components/ui/Modal";
@@ -15,6 +15,8 @@ export default function CardsPage() {
   const { soundEnabled, volume, reducedMotion, vibrationEnabled } = useSettingsStore();
   const [resetOpen, setResetOpen] = useState(false);
   const [inspected, setInspected] = useState<DrawnCard | null>(null);
+  const revealZone = useRef<HTMLDivElement>(null);
+  const scrollTimer = useRef<number | null>(null);
   const currentEntry = inspected ?? store.history.at(-1) ?? null;
   const remaining = store.deck.length - store.pointer;
 
@@ -23,6 +25,7 @@ export default function CardsPage() {
     const timer = window.setTimeout(() => store.finishAnimation(), reducedMotion ? 80 : 820);
     return () => window.clearTimeout(timer);
   }, [store.isDrawing, store.finishAnimation, reducedMotion]);
+  useEffect(() => () => { if (scrollTimer.current !== null) window.clearTimeout(scrollTimer.current); }, []);
 
   const draw = useCallback(() => {
     const card = store.draw();
@@ -33,9 +36,19 @@ export default function CardsPage() {
       window.setTimeout(() => soundEngine.play("flip", volume), reducedMotion ? 20 : 360);
     }
     if (vibrationEnabled && "vibrate" in navigator) navigator.vibrate(24);
+    if (matchMedia("(max-width: 720px)").matches) {
+      if (scrollTimer.current !== null) window.clearTimeout(scrollTimer.current);
+      scrollTimer.current = window.setTimeout(() => revealZone.current?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" }), reducedMotion ? 30 : 220);
+    }
   }, [store, soundEnabled, volume, vibrationEnabled, reducedMotion]);
 
-  const ruleAccent = useMemo(() => ({ social: "♥", story: "✦", challenge: "⚡", choice: "↗", wild: "★" })[currentEntry?.rule.category ?? "choice"], [currentEntry]);
+  const ruleIcon = useMemo(() => ({
+    social: <Heart size={14} aria-hidden="true" />,
+    story: <BookOpenText size={14} aria-hidden="true" />,
+    challenge: <Zap size={14} aria-hidden="true" />,
+    choice: <Shuffle size={14} aria-hidden="true" />,
+    wild: <Star size={14} aria-hidden="true" />,
+  })[currentEntry?.rule.category ?? "choice"], [currentEntry]);
 
   return (
     <div className="cards-page page-wrap">
@@ -48,13 +61,13 @@ export default function CardsPage() {
           <button className="primary-button draw-button" onClick={draw} disabled={store.isDrawing || remaining === 0}>{remaining === 0 ? "Deck completed" : store.isDrawing ? "Revealing…" : "Draw a card"}<ArrowRight size={19} /></button>
         </div>
 
-        <div className="reveal-zone" aria-live="polite">
+        <div ref={revealZone} className="reveal-zone" aria-live="polite">
           <div className="zone-label"><span>{inspected ? `Draw #${inspected.order}` : "Current card"}</span>{inspected && <button onClick={() => setInspected(null)}>Back to latest</button>}</div>
           {currentEntry ? (
             <div className="current-card-layout">
               <AnimatePresence mode="wait"><motion.div key={currentEntry.card.id} initial={reducedMotion ? false : { opacity: 0, x: -36, rotate: -4 }} animate={{ opacity: 1, x: 0, rotate: 0 }} exit={{ opacity: 0 }}><CardVisual card={currentEntry.card} revealed animate={store.isDrawing && !inspected} /></motion.div></AnimatePresence>
               <motion.article className={`rule-panel rule-panel--${currentEntry.rule.category}`} key={`${currentEntry.card.id}-rule`} initial={reducedMotion ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: reducedMotion ? 0 : 0.36 }}>
-                <div className="rule-category"><span>{ruleAccent}</span>{currentEntry.rule.category}</div><h2>{currentEntry.rule.title}</h2><p>{currentEntry.rule.description}</p><div className="rule-pass-note"><Sparkles size={15} /> Non-alcoholic drinks and passes always count.</div>
+                <div className="rule-category"><span>{ruleIcon}</span>{currentEntry.rule.category}</div><h2>{currentEntry.rule.title}</h2><p>{currentEntry.rule.description}</p><div className="rule-pass-note"><Sparkles size={15} /> Non-alcoholic drinks and passes always count.</div>
               </motion.article>
             </div>
           ) : <div className="empty-reveal"><div className="empty-card-mark">?</div><h2>Your first card is waiting.</h2><p>Draw from the deck to reveal a card and its rule.</p></div>}

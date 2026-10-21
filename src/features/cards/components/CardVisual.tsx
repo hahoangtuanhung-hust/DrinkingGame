@@ -1,11 +1,12 @@
 import type { PlayingCard } from "../types";
 
 const SUIT_SYMBOLS = { hearts: "♥", diamonds: "♦", clubs: "♣", spades: "♠" } as const;
+const SUIT_LABELS = { hearts: "hearts", diamonds: "diamonds", clubs: "clubs", spades: "spades" } as const;
 
 export function CardVisual({ card, revealed = true, compact = false, animate = false }: { card: PlayingCard | null; revealed?: boolean; compact?: boolean; animate?: boolean }) {
   const red = card?.suit === "hearts" || card?.suit === "diamonds";
   return (
-    <div className={`playing-card-wrap ${compact ? "playing-card-wrap--compact" : ""} ${animate ? "is-dealing" : ""}`}>
+    <div className={`playing-card-wrap ${compact ? "playing-card-wrap--compact" : ""} ${animate ? "is-dealing" : ""}`} role="img" aria-label={card && revealed ? `${card.rank} of ${SUIT_LABELS[card.suit]}` : "Face-down playing card"}>
       <div className={`playing-card-inner ${revealed ? "is-revealed" : ""}`}>
         <div className="playing-card card-back" aria-hidden={revealed}><div className="card-back-pattern"><span>AH</span></div></div>
         <div className={`playing-card card-face ${red ? "is-red" : ""}`} aria-hidden={!revealed}>
