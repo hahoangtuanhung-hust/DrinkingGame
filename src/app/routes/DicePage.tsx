@@ -1,23 +1,10 @@
-import { Activity, Eye, EyeOff, Hand, Smartphone, Sparkles } from "lucide-react";
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, type PointerEvent } from "react";
+import { Dices, Eye } from "lucide-react";
+import { lazy, Suspense, useCallback, useEffect, useRef, type PointerEvent } from "react";
 import { useSettingsStore } from "../settingsStore";
 import { soundEngine } from "../../lib/audio";
-import { summarizeDice } from "../../features/dice/engine/diceEngine";
-import { useDeviceShake } from "../../features/dice/hooks/useDeviceShake";
 import { useDiceStore } from "../../features/dice/store/diceStore";
 
 const DiceScene = lazy(() => import("../../features/dice/scene/DiceScene").then((module) => ({ default: module.DiceScene })));
-
-const phaseLabels = {
-  INITIAL: "Preparing the cup",
-  READY: "Cup ready",
-  SHAKING: "Shaking",
-  SETTLING: "Dice settling",
-  CLOSED_RESULT: "Result concealed",
-  PEEKING: "Peeking",
-  OPEN: "Cup open",
-  ERROR: "Scene paused",
-};
 
 export default function DicePage() {
   const dice = useDiceStore();
@@ -25,7 +12,10 @@ export default function DicePage() {
   const timers = useRef<number[]>([]);
   const gesture = useRef({ active: false, startX: 0, startY: 0, lastX: 0, lastDirection: 0, reversals: 0, travel: 0 });
   const busy = dice.phase === "SHAKING" || dice.phase === "SETTLING";
-  const summary = useMemo(() => summarizeDice(dice.values), [dice.values]);
+  const shouldOpen = dice.phase === "CLOSED_RESULT";
+  const vi = settings.language === "vi";
+  const actionLabel = busy ? (vi ? "Đang lắc…" : "Shaking…") : shouldOpen ? (vi ? "Mở" : "Open") : (vi ? "Lắc" : "Shake");
+  const statusLabel = busy ? actionLabel : shouldOpen ? (vi ? "Đã lắc xong, sẵn sàng mở nắp" : "Shake complete, ready to open") : dice.phase === "OPEN" ? (vi ? "Nắp đã mở" : "Cup open") : (vi ? "Sẵn sàng lắc" : "Ready to shake");
 
   useEffect(() => { dice.initialize(); }, [dice.initialize]);
   useEffect(() => () => timers.current.forEach(window.clearTimeout), []);
@@ -35,7 +25,7 @@ export default function DicePage() {
     timers.current.forEach(window.clearTimeout);
     timers.current = [];
     if (settings.soundEnabled) soundEngine.play("shake", settings.volume);
-    if (settings.vibrationEnabled && "vibrate" in navigator) navigator.vibrate([28, 34, 28]);
+    if (settings.vibrationEnabled && "vibrate" in navigator) navigator.vibrate([24, 18, 28, 18, 24]);
     const shakeDuration = settings.reducedMotion ? 120 : 920;
     timers.current.push(window.setTimeout(() => {
       dice.settle();
@@ -44,9 +34,8 @@ export default function DicePage() {
     }, shakeDuration));
   }, [dice, settings.soundEnabled, settings.volume, settings.vibrationEnabled, settings.reducedMotion]);
 
-  const deviceShake = useDeviceShake(shake);
   const open = () => { dice.open(); if (settings.soundEnabled) soundEngine.play("open", settings.volume); };
-  const close = () => { dice.close(); if (settings.soundEnabled) soundEngine.play("close", settings.volume); };
+  const primaryAction = shouldOpen ? open : shake;
 
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     if (busy) return;
@@ -76,20 +65,18 @@ export default function DicePage() {
 
   return (
     <div className="dice-page page-wrap">
-      <header className="page-heading dice-heading"><div><p className="eyebrow">Five dice. One reveal.</p><h1>Trust the shake.</h1><p>Drag up to peek, or give the cup a deliberate side-to-side shake.</p></div><div className="dice-status"><span className={busy ? "is-live" : ""} /><div><small>Game state</small><strong>{phaseLabels[dice.phase]}</strong></div></div></header>
+      <h1 className="sr-only">{vi ? "Bộ lắc năm viên xúc xắc 3D" : "Five-dice 3D shaker"}</h1>
+      <p className="sr-only" role="status" aria-live="polite">{statusLabel}</p>
       <section className="dice-layout">
         <div className={`dice-stage ${busy ? "is-shaking" : ""}`} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
-          <Suspense fallback={<div className="scene-loader"><span /><p>Lighting the table…</p></div>}><DiceScene values={dice.values} phase={dice.phase} peekAmount={dice.peekAmount} quality={settings.graphicsQuality} flashEnabled={settings.flashEnabled} reducedMotion={settings.reducedMotion} /></Suspense>
-          {!busy && dice.phase !== "OPEN" && <div className="gesture-hint"><Hand size={16} /><span>Drag up to lift · shake side to side</span></div>}
-          {busy && <div className="shake-meter" aria-hidden="true"><i /><i /><i /><i /><i /></div>}
+          <Suspense fallback={<div className="scene-loader"><span /><p>{vi ? "Đang dựng bàn…" : "Lighting the table…"}</p></div>}><DiceScene values={dice.values} phase={dice.phase} peekAmount={dice.peekAmount} quality={settings.graphicsQuality} flashEnabled={settings.flashEnabled} reducedMotion={settings.reducedMotion} language={settings.language} /></Suspense>
         </div>
-        <aside className="dice-controls">
-          <div className="dice-control-top"><p className="eyebrow">Cup controls</p><div className="phase-mark"><Activity size={16} /> {busy ? "Motion locked" : "Ready for input"}</div></div>
-          {dice.phase === "OPEN" ? <div className="dice-result" aria-live="polite"><div className="result-total"><span>Total</span><strong>{summary.total}</strong></div><div className="result-match"><span>{summary.matches >= 3 && <Sparkles size={16} />}{summary.label}</span><small>{dice.values.join(" · ")}</small></div><div className="result-pips">{dice.values.map((value, index) => <span key={index}>{value}</span>)}</div></div> : <div className="concealed-copy"><div className="lid-icon"><EyeOff size={24} /></div><h2>{dice.hasResult ? "The result is under the lid." : "The dice are lined up."}</h2><p>{dice.hasResult ? "Lift carefully for a peek, or open it all the way." : "Shake when everyone is ready."}</p></div>}
-          <div className="dice-actions"><button className="primary-button shake-button" disabled={busy} onClick={shake}><span className="shake-button-die">✣</span>{busy ? "Shaking…" : "Shake dice"}</button>{dice.phase === "OPEN" ? <button className="secondary-button" onClick={close}><EyeOff size={18} /> Close the lid</button> : <button className="secondary-button" onClick={open} disabled={busy}><Eye size={18} /> Open cup</button>}</div>
-          {deviceShake.supported && <button className={`motion-permission ${deviceShake.enabled ? "is-enabled" : ""}`} onClick={() => void deviceShake.request()} disabled={deviceShake.enabled}><Smartphone size={17} /><span><strong>{deviceShake.enabled ? "Phone shake enabled" : "Enable phone shake"}</strong><small>{deviceShake.enabled ? "A firm physical shake will roll the dice" : "Optional · permission requested on tap"}</small></span></button>}
-          <div className="dice-safety-note">Results are generated once per valid shake and stay unchanged until the next one.</div>
-        </aside>
+        <div className="dice-primary-control">
+          <button className={`primary-button dice-primary-button ${shouldOpen ? "is-open" : ""}`} disabled={busy} onClick={primaryAction} aria-live="polite">
+            {shouldOpen ? <Eye size={21} aria-hidden="true" /> : <Dices size={21} aria-hidden="true" />}
+            {actionLabel}
+          </button>
+        </div>
       </section>
     </div>
   );

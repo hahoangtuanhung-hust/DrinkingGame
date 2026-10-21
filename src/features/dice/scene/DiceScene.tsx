@@ -1,8 +1,8 @@
 import { ContactShadows, RoundedBox } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useMemo, useRef } from "react";
+import { useLayoutEffect, useMemo, useRef } from "react";
 import type { Group, PointLight } from "three";
-import type { GraphicsQuality } from "../../../app/settingsStore";
+import type { GraphicsQuality, Language } from "../../../app/settingsStore";
 import type { DicePhase, DieValue } from "../types";
 
 const PIPS: Record<number, [number, number][]> = {
@@ -14,7 +14,7 @@ const PIPS: Record<number, [number, number][]> = {
   6: [[-0.23, 0.27], [-0.23, 0], [-0.23, -0.27], [0.23, 0.27], [0.23, 0], [0.23, -0.27]],
 };
 
-function PipFace({ value, face }: { value: number; face: "top" | "bottom" | "front" | "back" | "left" | "right" }) {
+function PipFace({ value, face, color }: { value: number; face: "top" | "bottom" | "front" | "back" | "left" | "right"; color: string }) {
   return PIPS[value].map(([a, b], index) => {
     const props = {
       top: { position: [a, 0.506, b], rotation: [-Math.PI / 2, 0, 0] },
@@ -26,8 +26,8 @@ function PipFace({ value, face }: { value: number; face: "top" | "bottom" | "fro
     }[face];
     return (
       <mesh key={`${face}-${index}`} position={props.position as [number, number, number]} rotation={props.rotation as [number, number, number]}>
-        <circleGeometry args={[0.07, 12]} />
-        <meshStandardMaterial color="#171310" roughness={0.82} />
+        <circleGeometry args={[0.078, 14]} />
+        <meshStandardMaterial color={color} roughness={0.62} />
       </mesh>
     );
   });
@@ -42,56 +42,127 @@ const TOP_ROTATIONS: Record<DieValue, [number, number, number]> = {
   6: [Math.PI, 0, 0],
 };
 
-function Die({ value, position, index }: { value: DieValue; position: [number, number, number]; index: number }) {
+function Die({ value, position, index, scale }: { value: DieValue; position: [number, number, number]; index: number; scale: number }) {
   const rotation = TOP_ROTATIONS[value];
+  const pipColor = index % 2 === 0 ? "#263e9a" : "#bd3045";
   return (
-    <group position={position} rotation={[rotation[0], rotation[1] + index * 0.67, rotation[2]]} scale={0.72}>
-      <RoundedBox args={[1, 1, 1]} radius={0.14} smoothness={3} castShadow receiveShadow>
-        <meshPhysicalMaterial color={index === 4 ? "#d9a35e" : "#eee6d9"} roughness={0.3} clearcoat={0.42} clearcoatRoughness={0.4} />
-      </RoundedBox>
-      <PipFace value={1} face="top" /><PipFace value={6} face="bottom" />
-      <PipFace value={2} face="front" /><PipFace value={5} face="back" />
-      <PipFace value={3} face="right" /><PipFace value={4} face="left" />
+    <group position={position} rotation={[0, index * 0.67, 0]} scale={scale}>
+      <group rotation={rotation}>
+        <RoundedBox args={[1, 1, 1]} radius={0.15} smoothness={3} castShadow receiveShadow>
+          <meshPhysicalMaterial color="#f8f3ea" roughness={0.25} clearcoat={0.5} clearcoatRoughness={0.32} />
+        </RoundedBox>
+        <PipFace value={1} face="top" color={pipColor} /><PipFace value={6} face="bottom" color={pipColor} />
+        <PipFace value={2} face="front" color={pipColor} /><PipFace value={5} face="back" color={pipColor} />
+        <PipFace value={3} face="right" color={pipColor} /><PipFace value={4} face="left" color={pipColor} />
+      </group>
     </group>
   );
 }
 
-function CupLid({ amount }: { amount: number }) {
-  const lid = useRef<Group>(null);
+function CylindricalCup({ amount, reducedMotion, compact }: { amount: number; reducedMotion: boolean; compact: boolean }) {
+  const cup = useRef<Group>(null);
   const current = useRef(amount);
   const invalidate = useThree((state) => state.invalidate);
+
   useFrame(() => {
-    if (!lid.current) return;
-    current.current += (amount - current.current) * 0.12;
-    if (Math.abs(amount - current.current) < 0.002) current.current = amount;
+    if (!cup.current) return;
+    if (reducedMotion) current.current = amount;
+    else current.current += (amount - current.current) * 0.115;
+    if (Math.abs(amount - current.current) < 0.002 || reducedMotion) current.current = amount;
     else invalidate();
+
     const value = current.current;
-    lid.current.position.set(value * 4.9, 1.36 + value * 2.6, value * -0.45);
-    lid.current.rotation.z = value * -0.38;
+    const lift = Math.sin(value * Math.PI) * 1.25;
+    const openScale = compact ? 0.84 : 0.68;
+    cup.current.position.set(value * 0.82, lift + value * 0.32, value * -2.7);
+    cup.current.rotation.set(value * -1.05, value * 0.04, value * -0.035);
+    cup.current.scale.setScalar(1 - value * (1 - openScale));
   });
+
+  const initialScale = 1 - amount * (1 - (compact ? 0.84 : 0.68));
   return (
-    <group ref={lid} position={[amount * 4.9, 1.36 + amount * 2.6, amount * -0.45]} rotation={[0, 0, amount * -0.38]}>
-      <mesh castShadow receiveShadow>
-        <cylinderGeometry args={[3.48, 3.58, 0.52, 64]} />
-        <meshPhysicalMaterial color="#4d281e" roughness={0.28} clearcoat={0.45} clearcoatRoughness={0.35} />
+    <group ref={cup} position={[amount * 0.82, amount * 0.32, amount * -2.7]} rotation={[amount * -1.05, amount * 0.04, amount * -0.035]} scale={initialScale}>
+      <mesh position={[0, 2.3, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[2.52, 3.08, 3.62, 64]} />
+        <meshPhysicalMaterial color="#171a22" emissive="#090d18" emissiveIntensity={0.72} roughness={0.22} metalness={0.12} clearcoat={1} clearcoatRoughness={0.16} />
       </mesh>
-      <mesh position={[0, 0.28, 0]}>
-        <torusGeometry args={[2.5, 0.045, 10, 64]} />
-        <meshStandardMaterial color="#c38a4e" metalness={0.72} roughness={0.24} />
+
+      <mesh position={[0, 4.33, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[2.02, 2.52, 0.84, 64]} />
+        <meshPhysicalMaterial color="#1b1e28" emissive="#0a0e19" emissiveIntensity={0.68} roughness={0.2} metalness={0.14} clearcoat={1} clearcoatRoughness={0.14} />
       </mesh>
-      <mesh position={[0, 0.3, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0.5, 0.57, 32]} />
-        <meshStandardMaterial color="#d6a55f" metalness={0.76} roughness={0.22} />
+
+      <mesh position={[0, 0.52, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+        <torusGeometry args={[3.02, 0.085, 12, 64]} />
+        <meshStandardMaterial color="#747985" metalness={0.78} roughness={0.2} />
+      </mesh>
+
+      <mesh position={[0, 3.99, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+        <torusGeometry args={[2.5, 0.075, 12, 64]} />
+        <meshStandardMaterial color="#48494e" metalness={0.82} roughness={0.2} />
+      </mesh>
+
+      <mesh position={[0, 4.82, 0]} castShadow>
+        <cylinderGeometry args={[2.08, 2.08, 0.24, 64]} />
+        <meshPhysicalMaterial color="#161923" emissive="#090d18" emissiveIntensity={0.58} roughness={0.18} metalness={0.16} clearcoat={1} clearcoatRoughness={0.12} />
+      </mesh>
+
+      <mesh position={[0, 5.04, 0]} castShadow>
+        <cylinderGeometry args={[1.18, 1.3, 0.25, 48]} />
+        <meshPhysicalMaterial color="#1b1e28" emissive="#090d18" emissiveIntensity={0.52} roughness={0.18} metalness={0.22} clearcoat={1} clearcoatRoughness={0.12} />
+      </mesh>
+
+      <mesh position={[0, 5.27, 0]} castShadow>
+        <cylinderGeometry args={[1.55, 1.42, 0.24, 64]} />
+        <meshPhysicalMaterial color="#20232e" emissive="#0a0e1b" emissiveIntensity={0.5} roughness={0.16} metalness={0.2} clearcoat={1} clearcoatRoughness={0.1} />
+      </mesh>
+
+      <mesh position={[0, 5.405, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0.42, 1.34, 64]} />
+        <meshPhysicalMaterial color="#1c1e24" roughness={0.11} metalness={0.28} clearcoat={1} />
+      </mesh>
+
+      <mesh position={[-1.62, 2.38, 2.25]} rotation={[0.05, -0.08, 0.08]}>
+        <planeGeometry args={[0.22, 2.25]} />
+        <meshBasicMaterial color="#7e2430" transparent opacity={0.2} depthWrite={false} />
+      </mesh>
+      <mesh position={[1.08, 2.6, 2.43]} rotation={[0.04, 0.04, -0.06]}>
+        <planeGeometry args={[0.12, 1.85]} />
+        <meshBasicMaterial color="#f3d8ba" transparent opacity={0.12} depthWrite={false} />
       </mesh>
     </group>
   );
 }
 
-function TableScene({ values, phase, lidAmount, flashEnabled }: { values: DieValue[]; phase: DicePhase; lidAmount: number; flashEnabled: boolean }) {
+function DiceTray() {
+  return (
+    <group>
+      <mesh position={[0, 0.11, 0]} receiveShadow castShadow>
+        <cylinderGeometry args={[3.08, 3.3, 0.42, 64]} />
+        <meshPhysicalMaterial color="#090a0d" roughness={0.2} metalness={0.15} clearcoat={0.95} clearcoatRoughness={0.2} />
+      </mesh>
+      <mesh position={[0, 0.38, 0]} receiveShadow>
+        <cylinderGeometry args={[2.86, 2.98, 0.16, 64]} />
+        <meshStandardMaterial color="#18191d" roughness={0.65} metalness={0.08} />
+      </mesh>
+      <mesh position={[0, 0.54, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow receiveShadow>
+        <torusGeometry args={[3.02, 0.2, 18, 64]} />
+        <meshPhysicalMaterial color="#111216" roughness={0.18} metalness={0.18} clearcoat={1} clearcoatRoughness={0.16} />
+      </mesh>
+      <mesh position={[0, 0.29, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[3.23, 0.045, 10, 64]} />
+        <meshStandardMaterial color="#505158" metalness={0.85} roughness={0.2} />
+      </mesh>
+    </group>
+  );
+}
+
+function TableScene({ values, phase, cupAmount, flashEnabled, reducedMotion }: { values: DieValue[]; phase: DicePhase; cupAmount: number; flashEnabled: boolean; reducedMotion: boolean }) {
   const shaker = useRef<Group>(null);
   const flash = useRef<PointLight>(null);
+  const compact = useThree((state) => state.size.width < 640);
   const positions = useMemo<[number, number, number][]>(() => [
-    [-1.25, 0.55, -0.9], [0.1, 0.55, -1.2], [1.25, 0.55, -0.42], [-0.72, 0.55, 0.72], [0.78, 0.55, 0.78],
+    [-1.3, 0.94, -0.76], [0, 0.94, -1.02], [1.3, 0.94, -0.62], [-0.74, 0.94, 0.66], [0.74, 0.94, 0.7],
   ], []);
   const shaking = phase === "SHAKING" || phase === "SETTLING";
 
@@ -99,68 +170,85 @@ function TableScene({ values, phase, lidAmount, flashEnabled }: { values: DieVal
     if (!shaker.current) return;
     if (shaking) {
       const t = clock.elapsedTime;
-      const strength = phase === "SETTLING" ? 0.09 : 0.24;
-      shaker.current.position.x = Math.sin(t * 27) * strength;
-      shaker.current.position.z = Math.cos(t * 21) * strength * 0.55;
-      shaker.current.rotation.y = Math.sin(t * 19) * strength * 0.3;
-      if (flash.current) flash.current.intensity = flashEnabled ? 5 + Math.max(0, Math.sin(t * 16)) * 11 : 0;
+      const strength = phase === "SETTLING" ? 0.17 : compact ? 0.52 : 0.46;
+      const sideways = Math.sin(t * 29) + Math.sin(t * 47) * 0.16;
+      shaker.current.position.x = sideways * strength;
+      shaker.current.position.y = Math.abs(Math.sin(t * 29)) * strength * 0.055;
+      shaker.current.position.z = Math.cos(t * 17) * strength * 0.08;
+      shaker.current.rotation.y = Math.sin(t * 19) * strength * 0.05;
+      shaker.current.rotation.z = -sideways * strength * 0.075;
+      if (flash.current) flash.current.intensity = flashEnabled ? 4 + Math.max(0, Math.sin(t * 16)) * 8 : 0;
     } else {
       shaker.current.position.x *= 0.82;
+      shaker.current.position.y *= 0.82;
       shaker.current.position.z *= 0.82;
       shaker.current.rotation.y *= 0.82;
+      shaker.current.rotation.z *= 0.82;
       if (flash.current) flash.current.intensity *= 0.78;
     }
   });
 
   return (
     <>
-      <color attach="background" args={["#120f0d"]} />
-      <fog attach="fog" args={["#120f0d", 12, 24]} />
-      <ambientLight intensity={0.75} color="#ffe5c2" />
-      <directionalLight position={[-4, 9, 5]} intensity={3.4} color="#ffd49d" castShadow shadow-mapSize={[1024, 1024]} />
-      <pointLight ref={flash} position={[1, 6, 2]} intensity={0} color="#ffcb7f" distance={14} />
-      <hemisphereLight args={["#f5d5ad", "#160f0c", 1.1]} />
+      <color attach="background" args={["#0e0d0f"]} />
+      <fog attach="fog" args={["#0e0d0f", 14, 27]} />
+      <ambientLight intensity={0.42} color="#fff4e6" />
+      <hemisphereLight args={["#dce7ff", "#120c0c", 0.85]} />
+      <directionalLight position={[-5, 10, 7]} intensity={3.8} color="#fff1d7" castShadow shadow-mapSize={[1024, 1024]} />
+      <pointLight position={[-4.5, 4.2, 2.5]} intensity={12} color="#a62d3f" distance={10} decay={2} />
+      <pointLight position={[5, 5.5, -1.5]} intensity={11} color="#718eff" distance={12} decay={2} />
+      <pointLight position={[0, 6.5, 5]} intensity={10} color="#dce5ff" distance={18} decay={2} />
+      <pointLight position={[0.5, 4.5, -5]} intensity={14} color="#6886e8" distance={12} decay={2} />
+      <pointLight ref={flash} position={[0, 6, 3]} intensity={0} color="#ffdcaa" distance={14} />
 
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.18, 0]} receiveShadow>
-        <circleGeometry args={[12, 72]} />
-        <meshStandardMaterial color="#251914" roughness={0.92} metalness={0.02} />
+        <circleGeometry args={[13, 72]} />
+        <meshStandardMaterial color="#211517" roughness={0.94} metalness={0.01} />
       </mesh>
-      <group ref={shaker}>
-        <mesh position={[0, 0.16, 0]} receiveShadow castShadow>
-          <cylinderGeometry args={[3.23, 3.42, 0.58, 64]} />
-          <meshPhysicalMaterial color="#301c18" roughness={0.38} clearcoat={0.32} />
-        </mesh>
-        <mesh position={[0, 0.55, 0]} receiveShadow>
-          <cylinderGeometry args={[2.92, 3.04, 0.22, 64]} />
-          <meshStandardMaterial color="#16110f" roughness={0.82} />
-        </mesh>
-        <mesh position={[0, 0.8, 0]} castShadow receiveShadow>
-          <torusGeometry args={[3.12, 0.24, 18, 64]} />
-          <meshPhysicalMaterial color="#5b3125" roughness={0.38} clearcoat={0.26} />
-        </mesh>
-        {values.map((value, index) => <Die key={index} value={value} position={positions[index]} index={index} />)}
-        <CupLid amount={lidAmount} />
+
+      <group position={[compact ? -0.25 : -0.1, 0, 0]} scale={compact ? 1.02 : 1.3}>
+        <group ref={shaker}>
+          <DiceTray />
+          {values.map((value, index) => <Die key={index} value={value} position={positions[index]} index={index} scale={compact ? 0.96 : 0.78} />)}
+          <CylindricalCup amount={cupAmount} reducedMotion={reducedMotion} compact={compact} />
+        </group>
       </group>
-      <ContactShadows position={[0, -0.12, 0]} opacity={0.58} scale={15} blur={2.8} far={8} />
+
+      <ContactShadows position={[0, -0.12, 0]} opacity={0.7} scale={17} blur={2.5} far={9} />
     </>
   );
 }
 
+function CameraRig() {
+  const camera = useThree((state) => state.camera);
+  const compact = useThree((state) => state.size.width < 640);
+
+  useLayoutEffect(() => {
+    camera.position.set(compact ? 0.2 : 0.35, compact ? 16.2 : 15.8, compact ? 3.8 : 4.2);
+    camera.lookAt(0, 0.65, -1.4);
+    camera.updateProjectionMatrix();
+  }, [camera, compact]);
+
+  return null;
+}
+
 const getDpr = (quality: GraphicsQuality) => quality === "low" ? 1 : quality === "medium" ? 1.35 : quality === "high" ? 2 : Math.min(window.devicePixelRatio, 1.6);
 
-export function DiceScene({ values, phase, peekAmount, quality, flashEnabled, reducedMotion }: { values: DieValue[]; phase: DicePhase; peekAmount: number; quality: GraphicsQuality; flashEnabled: boolean; reducedMotion: boolean }) {
+export function DiceScene({ values, phase, peekAmount, quality, flashEnabled, reducedMotion, language }: { values: DieValue[]; phase: DicePhase; peekAmount: number; quality: GraphicsQuality; flashEnabled: boolean; reducedMotion: boolean; language: Language }) {
   const openAmount = phase === "OPEN" ? 1 : phase === "PEEKING" ? peekAmount : 0;
   const animated = (phase === "SHAKING" || phase === "SETTLING") && !reducedMotion;
   return (
     <Canvas
       shadows={quality !== "low"}
       dpr={getDpr(quality)}
-      camera={{ position: [0, 8.8, 9.4], fov: 40, near: 0.1, far: 40 }}
+      camera={{ position: [0.35, 15.8, 4.2], fov: 43, near: 0.1, far: 42 }}
       gl={{ antialias: quality !== "low", powerPreference: "high-performance" }}
       frameloop={animated ? "always" : "demand"}
-      aria-label="A three-dimensional dice cup containing five dice"
+      role="img"
+      aria-label={language === "vi" ? "Ống lắc xúc xắc hình trụ bóng, kèm khay tròn chứa năm viên xúc xắc ba chiều" : "A glossy cylindrical dice cup with a round tray containing five three-dimensional dice"}
     >
-      <TableScene values={values} phase={phase} lidAmount={openAmount} flashEnabled={flashEnabled && !reducedMotion} />
+      <CameraRig />
+      <TableScene values={values} phase={phase} cupAmount={openAmount} flashEnabled={flashEnabled && !reducedMotion} reducedMotion={reducedMotion} />
     </Canvas>
   );
 }

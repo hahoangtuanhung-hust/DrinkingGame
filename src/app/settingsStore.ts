@@ -4,6 +4,7 @@ import { z } from "zod";
 import { safeLocalStorage } from "../lib/storage";
 
 export type GraphicsQuality = "auto" | "low" | "medium" | "high";
+export type Language = "en" | "vi";
 
 const SettingsSchema = z.object({
   soundEnabled: z.boolean(),
@@ -12,6 +13,7 @@ const SettingsSchema = z.object({
   flashEnabled: z.boolean(),
   reducedMotion: z.boolean(),
   graphicsQuality: z.enum(["auto", "low", "medium", "high"]),
+  language: z.enum(["en", "vi"]).default("en"),
 });
 
 type SettingsState = z.infer<typeof SettingsSchema> & {
@@ -29,6 +31,7 @@ const defaults = {
   flashEnabled: true,
   reducedMotion: typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches,
   graphicsQuality: "auto" as GraphicsQuality,
+  language: "en" as Language,
 };
 
 export const useSettingsStore = create<SettingsState>()(

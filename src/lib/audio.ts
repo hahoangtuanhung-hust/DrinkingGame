@@ -3,6 +3,79 @@ type SoundName = "tap" | "draw" | "flip" | "shake" | "settle" | "open" | "close"
 class SoundEngine {
   private context: AudioContext | null = null;
 
+  private playDiceShake(context: AudioContext, now: number, volume: number) {
+    const duration = 0.92;
+    const master = context.createGain();
+    const compressor = context.createDynamicsCompressor();
+    compressor.threshold.setValueAtTime(-18, now);
+    compressor.knee.setValueAtTime(14, now);
+    compressor.ratio.setValueAtTime(5, now);
+    compressor.attack.setValueAtTime(0.003, now);
+    compressor.release.setValueAtTime(0.12, now);
+    master.gain.setValueAtTime(0.0001, now);
+    master.gain.exponentialRampToValueAtTime(Math.max(0.0001, volume * 0.62), now + 0.018);
+    master.gain.setValueAtTime(Math.max(0.0001, volume * 0.58), now + 0.72);
+    master.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+    master.connect(compressor).connect(context.destination);
+
+    // A quiet, pulsing scrape gives the cup some physical body between impacts.
+    const buffer = context.createBuffer(1, Math.ceil(context.sampleRate * duration), context.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < data.length; i += 1) {
+      const seconds = i / context.sampleRate;
+      const edgeFade = Math.min(1, seconds / 0.025, (duration - seconds) / 0.08);
+      const movement = Math.pow(Math.abs(Math.sin(seconds * Math.PI * 9.6)), 5);
+      data[i] = (Math.random() * 2 - 1) * (0.035 + movement * 0.2) * Math.max(0, edgeFade);
+    }
+    const scrape = context.createBufferSource();
+    const scrapeBand = context.createBiquadFilter();
+    const scrapeCeiling = context.createBiquadFilter();
+    scrapeBand.type = "bandpass";
+    scrapeBand.frequency.setValueAtTime(980, now);
+    scrapeBand.Q.setValueAtTime(0.72, now);
+    scrapeCeiling.type = "lowpass";
+    scrapeCeiling.frequency.setValueAtTime(3600, now);
+    scrape.buffer = buffer;
+    scrape.connect(scrapeBand).connect(scrapeCeiling).connect(master);
+    scrape.start(now);
+    scrape.stop(now + duration);
+
+    // Alternating, slightly irregular impacts mimic five dice striking opposite cup walls.
+    const impacts = [0.025, 0.105, 0.19, 0.275, 0.37, 0.455, 0.55, 0.645, 0.74, 0.825];
+    impacts.forEach((offset, index) => {
+      const hitAt = now + offset + (Math.random() - 0.5) * 0.014;
+      const side = index % 2 === 0 ? -0.62 : 0.62;
+      const panner = context.createStereoPanner();
+      panner.pan.setValueAtTime(side, hitAt);
+      panner.connect(master);
+
+      const dieImpact = context.createOscillator();
+      const dieGain = context.createGain();
+      const startFrequency = 1050 + Math.random() * 420;
+      dieImpact.type = index % 3 === 0 ? "square" : "triangle";
+      dieImpact.frequency.setValueAtTime(startFrequency, hitAt);
+      dieImpact.frequency.exponentialRampToValueAtTime(260 + Math.random() * 120, hitAt + 0.045);
+      dieGain.gain.setValueAtTime(0.0001, hitAt);
+      dieGain.gain.exponentialRampToValueAtTime(0.22 + Math.random() * 0.08, hitAt + 0.002);
+      dieGain.gain.exponentialRampToValueAtTime(0.0001, hitAt + 0.052);
+      dieImpact.connect(dieGain).connect(panner);
+      dieImpact.start(hitAt);
+      dieImpact.stop(hitAt + 0.055);
+
+      const cupImpact = context.createOscillator();
+      const cupGain = context.createGain();
+      cupImpact.type = "sine";
+      cupImpact.frequency.setValueAtTime(145 + Math.random() * 34, hitAt);
+      cupImpact.frequency.exponentialRampToValueAtTime(72, hitAt + 0.075);
+      cupGain.gain.setValueAtTime(0.0001, hitAt);
+      cupGain.gain.exponentialRampToValueAtTime(0.13, hitAt + 0.004);
+      cupGain.gain.exponentialRampToValueAtTime(0.0001, hitAt + 0.085);
+      cupImpact.connect(cupGain).connect(panner);
+      cupImpact.start(hitAt);
+      cupImpact.stop(hitAt + 0.09);
+    });
+  }
+
   private ensureContext() {
     const AudioContextClass = window.AudioContext ??
       (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
@@ -17,31 +90,21 @@ class SoundEngine {
     const context = this.ensureContext();
     if (!context) return;
     const now = context.currentTime;
+
+    if (name === "shake") {
+      this.playDiceShake(context, now, volume);
+      return;
+    }
+
     const gain = context.createGain();
     gain.gain.setValueAtTime(0.0001, now);
     gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, volume * 0.13), now + 0.012);
-    const durations: Record<SoundName, number> = {
-      tap: 0.08, draw: 0.18, flip: 0.12, shake: 0.56, settle: 0.22, open: 0.28, close: 0.2,
+    const durations: Record<Exclude<SoundName, "shake">, number> = {
+      tap: 0.08, draw: 0.18, flip: 0.12, settle: 0.22, open: 0.28, close: 0.2,
     };
     const duration = durations[name];
     gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
     gain.connect(context.destination);
-
-    if (name === "shake") {
-      const buffer = context.createBuffer(1, context.sampleRate * duration, context.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < data.length; i += 1) {
-        data[i] = (Math.random() * 2 - 1) * (Math.sin(i * 0.09) > 0.35 ? 1 : 0.2);
-      }
-      const noise = context.createBufferSource();
-      const filter = context.createBiquadFilter();
-      filter.type = "bandpass";
-      filter.frequency.value = 720;
-      noise.buffer = buffer;
-      noise.connect(filter).connect(gain);
-      noise.start(now);
-      return;
-    }
 
     const oscillator = context.createOscillator();
     const frequencies: Record<Exclude<SoundName, "shake">, number> = {
