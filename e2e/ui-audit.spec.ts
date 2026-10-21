@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const routes = ["/", "/cards", "/cards/rules", "/dice"];
+const routes = ["/DrinkingGame/#/", "/DrinkingGame/#/cards", "/DrinkingGame/#/cards/rules", "/DrinkingGame/#/dice"];
 
 test.describe("automated mobile UI audit", () => {
   test.use({ viewport: { width: 375, height: 812 } });
@@ -42,7 +42,7 @@ test.describe("automated mobile UI audit", () => {
   }
 
   test("settings dialog traps focus and returns it to the opener", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/DrinkingGame/#/");
     const opener = page.getByRole("button", { name: "Open settings" });
     await opener.click();
     const dialog = page.getByRole("dialog", { name: "Set the mood" });
@@ -57,7 +57,7 @@ test.describe("automated mobile UI audit", () => {
 
   test("dice layout remains usable in a short landscape viewport", async ({ page }) => {
     await page.setViewportSize({ width: 844, height: 390 });
-    await page.goto("/dice");
+    await page.goto("/DrinkingGame/#/dice");
     await expect(page.getByRole("button", { name: "Shake", exact: true })).toBeVisible();
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(overflow).toBeLessThanOrEqual(1);
@@ -84,19 +84,19 @@ test.describe("automated mobile UI audit", () => {
   });
 
   test("mobile rule filters keep the editor close while preserving all 52 cards", async ({ page }) => {
-    await page.goto("/cards/rules");
+    await page.goto("/DrinkingGame/#/cards/rules");
     await expect(page.locator(".rule-card-grid button")).toHaveCount(13);
     await page.getByRole("button", { name: "All", exact: true }).click();
     await expect(page.locator(".rule-card-grid button")).toHaveCount(52);
   });
 
   test("mobile primary actions stay reachable and drawing advances to the reveal", async ({ page }) => {
-    await page.goto("/dice");
+    await page.goto("/DrinkingGame/#/dice");
     const diceAction = page.locator(".dice-primary-button");
     await diceAction.scrollIntoViewIfNeeded();
     await expect(diceAction).toBeVisible();
     await expect(page.locator(".dice-primary-control button")).toHaveCount(1);
-    await page.goto("/cards");
+    await page.goto("/DrinkingGame/#/cards");
     await page.getByRole("button", { name: /draw a card/i }).click();
     await expect.poll(async () => {
       const box = await page.locator(".reveal-zone").boundingBox();

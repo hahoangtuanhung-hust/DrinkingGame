@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test("draws one card and keeps it in history", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/DrinkingGame/#/");
   await page.getByRole("link", { name: /deal me in/i }).click();
   await page.getByRole("button", { name: /draw a card/i }).click();
   await expect(page.getByText("51", { exact: true })).toBeVisible();
@@ -9,7 +9,7 @@ test("draws one card and keeps it in history", async ({ page }) => {
 });
 
 test("shakes and reveals five stable dice", async ({ page }) => {
-  await page.goto("/dice");
+  await page.goto("/DrinkingGame/#/dice");
   const actionButton = page.locator(".dice-primary-button");
   await expect(actionButton).toHaveAccessibleName("Shake");
   await actionButton.click();
@@ -23,7 +23,7 @@ test("shakes and reveals five stable dice", async ({ page }) => {
 });
 
 test("switches the dice interface between English and Vietnamese", async ({ page }) => {
-  await page.goto("/dice");
+  await page.goto("/DrinkingGame/#/dice");
   await page.getByRole("button", { name: "Chuyển sang tiếng Việt" }).click();
   await expect(page.locator(".dice-primary-button")).toHaveAccessibleName("Lắc");
   await expect(page.getByRole("button", { name: "Switch to English" })).toBeVisible();
