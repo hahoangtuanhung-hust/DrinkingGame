@@ -6,6 +6,7 @@ import { safeLocalStorage } from "../lib/storage";
 export type GraphicsQuality = "auto" | "low" | "medium" | "high";
 export type Language = "en" | "vi";
 export type Theme = "dark" | "light";
+export type DiceColor = "green" | "blue" | "red" | "yellow" | "pink" | "purple";
 
 const SettingsSchema = z.object({
   soundEnabled: z.boolean(),
@@ -16,6 +17,7 @@ const SettingsSchema = z.object({
   graphicsQuality: z.enum(["auto", "low", "medium", "high"]),
   language: z.enum(["en", "vi"]).default("en"),
   theme: z.enum(["dark", "light"]).default("dark"),
+  diceColor: z.enum(["green", "blue", "red", "yellow", "pink", "purple"]).default("blue"),
 });
 
 type SettingsState = z.infer<typeof SettingsSchema> & {
@@ -35,6 +37,7 @@ const defaults = {
   graphicsQuality: "auto" as GraphicsQuality,
   language: "en" as Language,
   theme: "dark" as Theme,
+  diceColor: "blue" as DiceColor,
 };
 
 export const useSettingsStore = create<SettingsState>()(

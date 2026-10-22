@@ -59,3 +59,18 @@ test("switches between light and dark themes and remembers the choice", async ({
   await page.getByRole("button", { name: "Switch to dark theme" }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
 });
+
+test("changes the complete dice set color and remembers the choice", async ({ page }) => {
+  await page.goto("/DrinkingGame/#/dice");
+  const stage = page.locator(".dice-stage");
+  await expect(stage).toHaveAttribute("data-dice-color", "blue");
+  await page.getByRole("button", { name: "Open settings" }).click();
+  const colorGroup = page.getByRole("radiogroup", { name: "Choose dice set color" });
+  await expect(colorGroup.getByRole("radio")).toHaveCount(6);
+  await colorGroup.getByRole("radio", { name: "Red", exact: true }).click();
+  await expect(colorGroup.getByRole("radio", { name: "Red", exact: true })).toHaveAttribute("aria-checked", "true");
+  await expect(stage).toHaveAttribute("data-dice-color", "red");
+  await page.keyboard.press("Escape");
+  await page.reload();
+  await expect(stage).toHaveAttribute("data-dice-color", "red");
+});

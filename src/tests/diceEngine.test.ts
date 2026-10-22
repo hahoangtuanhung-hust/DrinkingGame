@@ -1,12 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { canTransition, rollDice, summarizeDice } from "../features/dice/engine/diceEngine";
 import { DICE_SHAKE_TOTAL_MS, getDiceShakeTimeline } from "../features/dice/motion";
-import { DICE_PIP_COLORS, getDicePipColor } from "../features/dice/appearance";
+import { DICE_COLOR_OPTIONS, DICE_PIP_COLORS, DICE_SET_PALETTES, getDicePipColor } from "../features/dice/appearance";
 
 describe("dice engine", () => {
   it("uses red pips for one and four, and blue for every other value", () => {
     expect([1, 4].map((value) => getDicePipColor(value as 1 | 4))).toEqual([DICE_PIP_COLORS.red, DICE_PIP_COLORS.red]);
     expect([2, 3, 5, 6].map((value) => getDicePipColor(value as 2 | 3 | 5 | 6))).toEqual(Array(4).fill(DICE_PIP_COLORS.blue));
+  });
+  it("provides six distinct color palettes for the complete dice set", () => {
+    expect(DICE_COLOR_OPTIONS).toEqual(["green", "blue", "red", "yellow", "pink", "purple"]);
+    expect(new Set(DICE_COLOR_OPTIONS.map((color) => DICE_SET_PALETTES[color].body)).size).toBe(6);
   });
   it("uses a two-second physical shake timeline", () => {
     const timeline = getDiceShakeTimeline(false);

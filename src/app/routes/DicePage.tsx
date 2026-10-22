@@ -69,8 +69,8 @@ export default function DicePage() {
       <h1 className="sr-only">{vi ? "Bộ lắc năm viên xúc xắc 3D" : "Five-dice 3D shaker"}</h1>
       <p className="sr-only" role="status" aria-live="polite">{statusLabel}</p>
       <section className="dice-layout">
-        <div className={`dice-stage ${busy ? "is-shaking" : ""}`} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
-          <Suspense fallback={<div className="scene-loader"><span /><p>{vi ? "Đang dựng bàn…" : "Lighting the table…"}</p></div>}><DiceScene values={dice.values} phase={dice.phase} peekAmount={dice.peekAmount} quality={settings.graphicsQuality} flashEnabled={settings.flashEnabled} reducedMotion={settings.reducedMotion} language={settings.language} /></Suspense>
+        <div className={`dice-stage ${busy ? "is-shaking" : ""}`} data-dice-color={settings.diceColor} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
+          <Suspense fallback={<div className="scene-loader"><span /><p>{vi ? "Đang dựng bàn…" : "Lighting the table…"}</p></div>}><DiceScene values={dice.values} phase={dice.phase} peekAmount={dice.peekAmount} quality={settings.graphicsQuality} flashEnabled={settings.flashEnabled} reducedMotion={settings.reducedMotion} language={settings.language} diceColor={settings.diceColor} /></Suspense>
         </div>
         <div className="dice-primary-control">
           <button className={`primary-button dice-primary-button ${shouldOpen ? "is-open" : ""}`} disabled={busy} onClick={primaryAction} aria-live="polite">

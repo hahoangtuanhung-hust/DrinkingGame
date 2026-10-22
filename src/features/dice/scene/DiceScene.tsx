@@ -2,8 +2,8 @@ import { ContactShadows, RoundedBox } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import type { Group, PointLight } from "three";
-import type { GraphicsQuality, Language } from "../../../app/settingsStore";
-import { getDicePipColor } from "../appearance";
+import type { DiceColor, GraphicsQuality, Language } from "../../../app/settingsStore";
+import { DICE_SET_PALETTES, getDicePipColor } from "../appearance";
 import type { DicePhase, DieValue } from "../types";
 
 const PIPS: Record<number, [number, number][]> = {
@@ -59,10 +59,11 @@ function Die({ value, position, index, scale }: { value: DieValue; position: [nu
   );
 }
 
-function CylindricalCup({ amount, reducedMotion, compact }: { amount: number; reducedMotion: boolean; compact: boolean }) {
+function CylindricalCup({ amount, reducedMotion, compact, color }: { amount: number; reducedMotion: boolean; compact: boolean; color: DiceColor }) {
   const cup = useRef<Group>(null);
   const current = useRef(amount);
   const invalidate = useThree((state) => state.invalidate);
+  const palette = DICE_SET_PALETTES[color];
 
   useFrame(() => {
     if (!cup.current) return;
@@ -84,12 +85,12 @@ function CylindricalCup({ amount, reducedMotion, compact }: { amount: number; re
     <group ref={cup} position={[amount * 0.82, amount * 0.32, amount * -2.7]} rotation={[amount * -1.05, amount * 0.04, amount * -0.035]} scale={initialScale}>
       <mesh position={[0, 2.3, 0]} castShadow receiveShadow>
         <cylinderGeometry args={[2.52, 3.08, 3.62, 64]} />
-        <meshPhysicalMaterial color="#171a22" emissive="#090d18" emissiveIntensity={0.72} roughness={0.22} metalness={0.12} clearcoat={1} clearcoatRoughness={0.16} />
+        <meshPhysicalMaterial color={palette.body} emissive={palette.emissive} emissiveIntensity={0.48} roughness={0.22} metalness={0.12} clearcoat={1} clearcoatRoughness={0.16} />
       </mesh>
 
       <mesh position={[0, 4.33, 0]} castShadow receiveShadow>
         <cylinderGeometry args={[2.02, 2.52, 0.84, 64]} />
-        <meshPhysicalMaterial color="#1b1e28" emissive="#0a0e19" emissiveIntensity={0.68} roughness={0.2} metalness={0.14} clearcoat={1} clearcoatRoughness={0.14} />
+        <meshPhysicalMaterial color={palette.upper} emissive={palette.emissive} emissiveIntensity={0.44} roughness={0.2} metalness={0.14} clearcoat={1} clearcoatRoughness={0.14} />
       </mesh>
 
       <mesh position={[0, 0.52, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
@@ -104,27 +105,27 @@ function CylindricalCup({ amount, reducedMotion, compact }: { amount: number; re
 
       <mesh position={[0, 4.82, 0]} castShadow>
         <cylinderGeometry args={[2.08, 2.08, 0.24, 64]} />
-        <meshPhysicalMaterial color="#161923" emissive="#090d18" emissiveIntensity={0.58} roughness={0.18} metalness={0.16} clearcoat={1} clearcoatRoughness={0.12} />
+        <meshPhysicalMaterial color={palette.top} emissive={palette.emissive} emissiveIntensity={0.42} roughness={0.18} metalness={0.16} clearcoat={1} clearcoatRoughness={0.12} />
       </mesh>
 
       <mesh position={[0, 5.04, 0]} castShadow>
         <cylinderGeometry args={[1.18, 1.3, 0.25, 48]} />
-        <meshPhysicalMaterial color="#1b1e28" emissive="#090d18" emissiveIntensity={0.52} roughness={0.18} metalness={0.22} clearcoat={1} clearcoatRoughness={0.12} />
+        <meshPhysicalMaterial color={palette.upper} emissive={palette.emissive} emissiveIntensity={0.4} roughness={0.18} metalness={0.22} clearcoat={1} clearcoatRoughness={0.12} />
       </mesh>
 
       <mesh position={[0, 5.27, 0]} castShadow>
         <cylinderGeometry args={[1.55, 1.42, 0.24, 64]} />
-        <meshPhysicalMaterial color="#20232e" emissive="#0a0e1b" emissiveIntensity={0.5} roughness={0.16} metalness={0.2} clearcoat={1} clearcoatRoughness={0.1} />
+        <meshPhysicalMaterial color={palette.upper} emissive={palette.emissive} emissiveIntensity={0.38} roughness={0.16} metalness={0.2} clearcoat={1} clearcoatRoughness={0.1} />
       </mesh>
 
       <mesh position={[0, 5.405, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[0.42, 1.34, 64]} />
-        <meshPhysicalMaterial color="#1c1e24" roughness={0.11} metalness={0.28} clearcoat={1} />
+        <meshPhysicalMaterial color={palette.top} roughness={0.11} metalness={0.28} clearcoat={1} />
       </mesh>
 
       <mesh position={[-1.62, 2.38, 2.25]} rotation={[0.05, -0.08, 0.08]}>
         <planeGeometry args={[0.22, 2.25]} />
-        <meshBasicMaterial color="#7e2430" transparent opacity={0.2} depthWrite={false} />
+        <meshBasicMaterial color={palette.accent} transparent opacity={0.22} depthWrite={false} />
       </mesh>
       <mesh position={[1.08, 2.6, 2.43]} rotation={[0.04, 0.04, -0.06]}>
         <planeGeometry args={[0.12, 1.85]} />
@@ -134,20 +135,21 @@ function CylindricalCup({ amount, reducedMotion, compact }: { amount: number; re
   );
 }
 
-function DiceTray() {
+function DiceTray({ color }: { color: DiceColor }) {
+  const palette = DICE_SET_PALETTES[color];
   return (
     <group>
       <mesh position={[0, 0.11, 0]} receiveShadow castShadow>
         <cylinderGeometry args={[3.08, 3.3, 0.42, 64]} />
-        <meshPhysicalMaterial color="#090a0d" roughness={0.2} metalness={0.15} clearcoat={0.95} clearcoatRoughness={0.2} />
+        <meshPhysicalMaterial color={palette.tray} emissive={palette.emissive} emissiveIntensity={0.24} roughness={0.2} metalness={0.15} clearcoat={0.95} clearcoatRoughness={0.2} />
       </mesh>
       <mesh position={[0, 0.38, 0]} receiveShadow>
         <cylinderGeometry args={[2.86, 2.98, 0.16, 64]} />
-        <meshStandardMaterial color="#18191d" roughness={0.65} metalness={0.08} />
+        <meshStandardMaterial color={palette.trayInner} roughness={0.65} metalness={0.08} />
       </mesh>
       <mesh position={[0, 0.54, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow receiveShadow>
         <torusGeometry args={[3.02, 0.2, 18, 64]} />
-        <meshPhysicalMaterial color="#111216" roughness={0.18} metalness={0.18} clearcoat={1} clearcoatRoughness={0.16} />
+        <meshPhysicalMaterial color={palette.tray} roughness={0.18} metalness={0.18} clearcoat={1} clearcoatRoughness={0.16} />
       </mesh>
       <mesh position={[0, 0.29, 0]} rotation={[Math.PI / 2, 0, 0]}>
         <torusGeometry args={[3.23, 0.045, 10, 64]} />
@@ -157,7 +159,7 @@ function DiceTray() {
   );
 }
 
-function TableScene({ values, phase, cupAmount, flashEnabled, reducedMotion }: { values: DieValue[]; phase: DicePhase; cupAmount: number; flashEnabled: boolean; reducedMotion: boolean }) {
+function TableScene({ values, phase, cupAmount, flashEnabled, reducedMotion, diceColor }: { values: DieValue[]; phase: DicePhase; cupAmount: number; flashEnabled: boolean; reducedMotion: boolean; diceColor: DiceColor }) {
   const shaker = useRef<Group>(null);
   const flash = useRef<PointLight>(null);
   const shakeElapsed = useRef(0);
@@ -215,7 +217,7 @@ function TableScene({ values, phase, cupAmount, flashEnabled, reducedMotion }: {
       <ambientLight intensity={0.42} color="#fff4e6" />
       <hemisphereLight args={["#dce7ff", "#120c0c", 0.85]} />
       <directionalLight position={[-5, 10, 7]} intensity={3.8} color="#fff1d7" castShadow shadow-mapSize={[1024, 1024]} />
-      <pointLight position={[-4.5, 4.2, 2.5]} intensity={12} color="#a62d3f" distance={10} decay={2} />
+      <pointLight position={[-4.5, 4.2, 2.5]} intensity={12} color={DICE_SET_PALETTES[diceColor].accent} distance={10} decay={2} />
       <pointLight position={[5, 5.5, -1.5]} intensity={11} color="#718eff" distance={12} decay={2} />
       <pointLight position={[0, 6.5, 5]} intensity={10} color="#dce5ff" distance={18} decay={2} />
       <pointLight position={[0.5, 4.5, -5]} intensity={14} color="#6886e8" distance={12} decay={2} />
@@ -228,9 +230,9 @@ function TableScene({ values, phase, cupAmount, flashEnabled, reducedMotion }: {
 
       <group position={[compact ? -0.25 : -0.1, 0, 0]} scale={compact ? 1.02 : 1.3}>
         <group ref={shaker}>
-          <DiceTray />
+          <DiceTray color={diceColor} />
           {values.map((value, index) => <Die key={index} value={value} position={positions[index]} index={index} scale={compact ? 0.96 : 0.78} />)}
-          <CylindricalCup amount={cupAmount} reducedMotion={reducedMotion} compact={compact} />
+          <CylindricalCup amount={cupAmount} reducedMotion={reducedMotion} compact={compact} color={diceColor} />
         </group>
       </group>
 
@@ -254,7 +256,7 @@ function CameraRig() {
 
 const getDpr = (quality: GraphicsQuality) => quality === "low" ? 1 : quality === "medium" ? 1.35 : quality === "high" ? 2 : Math.min(window.devicePixelRatio, 1.6);
 
-export function DiceScene({ values, phase, peekAmount, quality, flashEnabled, reducedMotion, language }: { values: DieValue[]; phase: DicePhase; peekAmount: number; quality: GraphicsQuality; flashEnabled: boolean; reducedMotion: boolean; language: Language }) {
+export function DiceScene({ values, phase, peekAmount, quality, flashEnabled, reducedMotion, language, diceColor }: { values: DieValue[]; phase: DicePhase; peekAmount: number; quality: GraphicsQuality; flashEnabled: boolean; reducedMotion: boolean; language: Language; diceColor: DiceColor }) {
   const openAmount = phase === "OPEN" ? 1 : phase === "PEEKING" ? peekAmount : 0;
   const animated = (phase === "SHAKING" || phase === "SETTLING") && !reducedMotion;
   return (
@@ -268,7 +270,7 @@ export function DiceScene({ values, phase, peekAmount, quality, flashEnabled, re
       aria-label={language === "vi" ? "Ống lắc xúc xắc hình trụ bóng, kèm khay tròn chứa năm viên xúc xắc ba chiều" : "A glossy cylindrical dice cup with a round tray containing five three-dimensional dice"}
     >
       <CameraRig />
-      <TableScene values={values} phase={phase} cupAmount={openAmount} flashEnabled={flashEnabled && !reducedMotion} reducedMotion={reducedMotion} />
+      <TableScene values={values} phase={phase} cupAmount={openAmount} flashEnabled={flashEnabled && !reducedMotion} reducedMotion={reducedMotion} diceColor={diceColor} />
     </Canvas>
   );
 }

@@ -1,7 +1,13 @@
-import { Info, Smartphone, Sparkles, Volume2 } from "lucide-react";
+import { Check, Info, Smartphone, Sparkles, Volume2 } from "lucide-react";
 import { Modal } from "../components/ui/Modal";
 import { Toggle } from "../components/ui/Toggle";
-import { useSettingsStore, type GraphicsQuality } from "./settingsStore";
+import { DICE_COLOR_OPTIONS, DICE_SET_PALETTES } from "../features/dice/appearance";
+import { useSettingsStore, type DiceColor, type GraphicsQuality } from "./settingsStore";
+
+const COLOR_LABELS: Record<"en" | "vi", Record<DiceColor, string>> = {
+  en: { green: "Green", blue: "Blue", red: "Red", yellow: "Yellow", pink: "Pink", purple: "Purple" },
+  vi: { green: "Xanh lá", blue: "Xanh dương", red: "Đỏ", yellow: "Vàng", pink: "Hồng", purple: "Tím" },
+};
 
 export function GlobalModals() {
   const settings = useSettingsStore();
@@ -16,6 +22,7 @@ export function GlobalModals() {
           <Toggle checked={settings.vibrationEnabled} onChange={(value) => settings.setSetting("vibrationEnabled", value)} label={vi ? "Rung phản hồi" : "Haptics"} description={vi ? "Rung ngắn sau thao tác chủ động" : "Short vibration after intentional actions"} />
           <Toggle checked={settings.flashEnabled} onChange={(value) => settings.setSetting("flashEnabled", value)} label={vi ? "Nháy sáng" : "Light pulse"} description={vi ? "Ánh sáng ngắn trong cảnh khi lắc" : "A brief in-scene glow while shaking"} />
           <Toggle checked={settings.reducedMotion} onChange={(value) => settings.setSetting("reducedMotion", value)} label={vi ? "Giảm chuyển động" : "Reduced motion"} description={vi ? "Chuyển cảnh đơn giản và không rung cảnh" : "Simpler transitions and no scene shake"} />
+          <div className="dice-color-setting"><span><strong>{vi ? "Màu bộ xí ngầu" : "Dice set color"}</strong><small>{vi ? "Đổi màu ống lắc, nắp và khay" : "Colors the cup, lid, and tray"}</small></span><div className="dice-color-options" role="radiogroup" aria-label={vi ? "Chọn màu bộ xí ngầu" : "Choose dice set color"}>{DICE_COLOR_OPTIONS.map((color) => <button key={color} type="button" role="radio" aria-checked={settings.diceColor === color} className={settings.diceColor === color ? "is-selected" : ""} onClick={() => settings.setSetting("diceColor", color)}><i style={{ backgroundColor: DICE_SET_PALETTES[color].swatch }} aria-hidden="true">{settings.diceColor === color && <Check size={14} />}</i><span>{COLOR_LABELS[vi ? "vi" : "en"][color]}</span></button>)}</div></div>
           <label className="select-row"><span><strong>{vi ? "Chất lượng đồ họa" : "Graphics quality"}</strong><small>{vi ? "Điều chỉnh chi tiết 3D và mật độ điểm ảnh" : "Adjusts 3D detail and pixel density"}</small></span><select aria-label={vi ? "Chất lượng đồ họa" : "Graphics quality"} value={settings.graphicsQuality} onChange={(e) => settings.setSetting("graphicsQuality", e.target.value as GraphicsQuality)}><option value="auto">{vi ? "Tự động" : "Auto"}</option><option value="low">{vi ? "Thấp" : "Low"}</option><option value="medium">{vi ? "Trung bình" : "Medium"}</option><option value="high">{vi ? "Cao" : "High"}</option></select></label>
         </div>
       </Modal>
