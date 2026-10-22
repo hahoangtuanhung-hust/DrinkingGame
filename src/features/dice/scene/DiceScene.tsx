@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import type { Group, PointLight } from "three";
 import type { GraphicsQuality, Language } from "../../../app/settingsStore";
+import { getDicePipColor } from "../appearance";
 import type { DicePhase, DieValue } from "../types";
 
 const PIPS: Record<number, [number, number][]> = {
@@ -14,7 +15,7 @@ const PIPS: Record<number, [number, number][]> = {
   6: [[-0.23, 0.27], [-0.23, 0], [-0.23, -0.27], [0.23, 0.27], [0.23, 0], [0.23, -0.27]],
 };
 
-function PipFace({ value, face, color }: { value: number; face: "top" | "bottom" | "front" | "back" | "left" | "right"; color: string }) {
+function PipFace({ value, face }: { value: DieValue; face: "top" | "bottom" | "front" | "back" | "left" | "right" }) {
   return PIPS[value].map(([a, b], index) => {
     const props = {
       top: { position: [a, 0.506, b], rotation: [-Math.PI / 2, 0, 0] },
@@ -27,7 +28,7 @@ function PipFace({ value, face, color }: { value: number; face: "top" | "bottom"
     return (
       <mesh key={`${face}-${index}`} position={props.position as [number, number, number]} rotation={props.rotation as [number, number, number]}>
         <circleGeometry args={[0.078, 14]} />
-        <meshStandardMaterial color={color} roughness={0.62} />
+        <meshStandardMaterial color={getDicePipColor(value)} roughness={0.62} />
       </mesh>
     );
   });
@@ -44,16 +45,15 @@ const TOP_ROTATIONS: Record<DieValue, [number, number, number]> = {
 
 function Die({ value, position, index, scale }: { value: DieValue; position: [number, number, number]; index: number; scale: number }) {
   const rotation = TOP_ROTATIONS[value];
-  const pipColor = index % 2 === 0 ? "#263e9a" : "#bd3045";
   return (
     <group position={position} rotation={[0, index * 0.67, 0]} scale={scale}>
       <group rotation={rotation}>
         <RoundedBox args={[1, 1, 1]} radius={0.15} smoothness={3} castShadow receiveShadow>
           <meshPhysicalMaterial color="#f8f3ea" roughness={0.25} clearcoat={0.5} clearcoatRoughness={0.32} />
         </RoundedBox>
-        <PipFace value={1} face="top" color={pipColor} /><PipFace value={6} face="bottom" color={pipColor} />
-        <PipFace value={2} face="front" color={pipColor} /><PipFace value={5} face="back" color={pipColor} />
-        <PipFace value={3} face="right" color={pipColor} /><PipFace value={4} face="left" color={pipColor} />
+        <PipFace value={1} face="top" /><PipFace value={6} face="bottom" />
+        <PipFace value={2} face="front" /><PipFace value={5} face="back" />
+        <PipFace value={3} face="right" /><PipFace value={4} face="left" />
       </group>
     </group>
   );
