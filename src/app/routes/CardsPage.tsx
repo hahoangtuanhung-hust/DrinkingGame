@@ -17,6 +17,7 @@ export default function CardsPage() {
   const { soundEnabled, volume, reducedMotion, vibrationEnabled, language } = useSettingsStore();
   const t = getCopy(language).cards;
   const [resetOpen, setResetOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [inspected, setInspected] = useState<DrawnCard | null>(null);
   const revealZone = useRef<HTMLDivElement>(null);
   const scrollTimer = useRef<number | null>(null);
@@ -54,10 +55,18 @@ export default function CardsPage() {
     wild: <Star size={14} aria-hidden="true" />,
   })[currentRule?.category ?? "choice"], [currentRule]);
 
+  const inspectHistoryEntry = (entry: DrawnCard) => {
+    setInspected(entry);
+    setHistoryOpen(false);
+    window.setTimeout(
+      () => revealZone.current?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" }),
+      reducedMotion ? 0 : 120,
+    );
+  };
+
   return (
     <div className="cards-page page-wrap">
-      <header className="page-heading cards-heading"><div><p className="eyebrow">{t.eyebrow}</p><h1>{t.title}</h1><p>{t.subtitle}</p></div><div className="heading-actions"><Link to="/cards/rules" className="secondary-button"><PencilLine size={17} /> {t.editRules}</Link><button className="ghost-button" onClick={() => store.pointer > 0 ? setResetOpen(true) : store.resetDeck()}><RotateCcw size={17} /> {t.reset}</button></div></header>
-
+      <h1 className="sr-only">{t.title}</h1>
       <section className="card-table-layout">
         <div className="deck-zone">
           <div className="zone-label"><span>{t.drawPile}</span><span>{t.swipe}</span></div>
@@ -78,9 +87,21 @@ export default function CardsPage() {
         </div>
       </section>
 
-      <section className="history-section"><header><div><p className="eyebrow"><History size={14} /> {t.history}</p><h2>{t.historyTitle(store.history.length)}</h2></div><span className="history-tally">{store.history.length} / 52</span></header>
-        {store.history.length > 0 ? <div className="history-strip">{[...store.history].reverse().map((entry) => <button key={entry.card.id} className={`history-card ${currentEntry?.card.id === entry.card.id ? "is-active" : ""}`} onClick={() => setInspected(entry)}><span className={entry.card.suit === "hearts" || entry.card.suit === "diamonds" ? "is-red" : ""}>{entry.card.rank} {suitSymbol(entry.card.suit)}</span><small>#{entry.order} · {localizeRule(entry.card, entry.rule, language).title}</small></button>)}</div> : <div className="history-empty">{t.historyEmpty}</div>}
-      </section>
+      <button className="cards-history-button" onClick={() => setHistoryOpen(true)} aria-haspopup="dialog">
+        <span className="cards-history-icon"><History size={20} aria-hidden="true" /></span>
+        <span className="cards-history-copy"><strong>{t.history}</strong><small>{t.historyTitle(store.history.length)}</small></span>
+        <span className="cards-history-count" aria-label={`${store.history.length} / 52`}>{store.history.length}<small>/52</small></span>
+      </button>
+
+      <div className="cards-footer-actions" aria-label={language === "vi" ? "Tùy chọn bàn bài" : "Card table options"}>
+        <Link to="/cards/rules" className="secondary-button"><PencilLine size={17} aria-hidden="true" /> {t.editRules}</Link>
+        <button className="ghost-button" onClick={() => store.pointer > 0 ? setResetOpen(true) : store.resetDeck()}><RotateCcw size={17} aria-hidden="true" /> {t.reset}</button>
+      </div>
+
+      <Modal open={historyOpen} onClose={() => setHistoryOpen(false)} title={t.historyTitle(store.history.length)} eyebrow={t.history} closeLabel={language === "vi" ? "Đóng lịch sử" : "Close history"}>
+        <div className="history-modal-tally"><History size={15} aria-hidden="true" /><span>{store.history.length} / 52</span></div>
+        {store.history.length > 0 ? <div className="history-modal-list">{[...store.history].reverse().map((entry) => <button key={entry.card.id} className={`history-card ${currentEntry?.card.id === entry.card.id ? "is-active" : ""}`} onClick={() => inspectHistoryEntry(entry)}><span className={entry.card.suit === "hearts" || entry.card.suit === "diamonds" ? "is-red" : ""}>{entry.card.rank} {suitSymbol(entry.card.suit)}</span><small>#{entry.order} · {localizeRule(entry.card, entry.rule, language).title}</small></button>)}</div> : <div className="history-empty">{t.historyEmpty}</div>}
+      </Modal>
 
       <Modal open={resetOpen} onClose={() => setResetOpen(false)} title={t.resetTitle} eyebrow={t.resetEyebrow} closeLabel={language === "vi" ? "Đóng hộp thoại" : "Close dialog"}><p className="modal-lead">{t.resetBody(store.history.length)}</p><div className="modal-actions"><button className="ghost-button" onClick={() => setResetOpen(false)}>{t.keepPlaying}</button><button className="danger-button" onClick={() => { store.resetDeck(); setInspected(null); setResetOpen(false); }}>{t.shuffleReset}</button></div></Modal>
     </div>

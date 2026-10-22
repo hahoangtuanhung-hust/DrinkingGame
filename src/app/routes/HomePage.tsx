@@ -3,13 +3,14 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { getCopy } from "../i18n";
 import { useSettingsStore } from "../settingsStore";
+import { SuitIcon } from "../../features/cards/components/card-art/SuitIcon";
 
 function DicePreview() {
   return <div className="home-dice-preview" aria-hidden="true"><div className="preview-glow" /><div className="mini-cup"><span /></div><div className="mini-die die-a">••<br />••</div><div className="mini-die die-b">•<br />•</div><div className="table-line" /></div>;
 }
 
 function CardPreview() {
-  return <div className="home-card-preview" aria-hidden="true"><div className="card-shadow-stack" /><div className="preview-card preview-card--back"><span>AH</span></div><div className="preview-card preview-card--face"><span className="card-corner">A<br />♥</span><b>♥</b></div></div>;
+  return <div className="home-card-preview" aria-hidden="true"><div className="card-shadow-stack" /><div className="preview-card preview-card--back"><span>AH</span></div><div className="preview-card preview-card--face"><span className="card-corner">A<br /><SuitIcon suit="hearts" size={15} /></span><b><SuitIcon suit="hearts" size={62} /></b></div></div>;
 }
 
 export default function HomePage() {
