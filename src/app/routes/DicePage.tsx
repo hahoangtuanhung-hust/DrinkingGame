@@ -70,7 +70,7 @@ export default function DicePage() {
       <p className="sr-only" role="status" aria-live="polite">{statusLabel}</p>
       <section className="dice-layout">
         <div className={`dice-stage ${busy ? "is-shaking" : ""}`} data-dice-color={settings.diceColor} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
-          <Suspense fallback={<div className="scene-loader"><span /><p>{vi ? "Đang dựng bàn…" : "Lighting the table…"}</p></div>}><DiceScene values={dice.values} phase={dice.phase} peekAmount={dice.peekAmount} quality={settings.graphicsQuality} flashEnabled={settings.flashEnabled} reducedMotion={settings.reducedMotion} language={settings.language} diceColor={settings.diceColor} /></Suspense>
+          <Suspense fallback={<div className="scene-loader"><span /><p>{vi ? "Đang dựng bàn…" : "Lighting the table…"}</p></div>}><DiceScene values={dice.values} phase={dice.phase} peekAmount={dice.peekAmount} quality={settings.graphicsQuality} flashEnabled={settings.flashEnabled} reducedMotion={settings.reducedMotion} language={settings.language} diceColor={settings.diceColor} theme={settings.theme} /></Suspense>
         </div>
         <div className="dice-primary-control">
           <button className={`primary-button dice-primary-button ${shouldOpen ? "is-open" : ""}`} disabled={busy} onClick={primaryAction} aria-live="polite">

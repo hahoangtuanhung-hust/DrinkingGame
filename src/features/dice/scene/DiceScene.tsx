@@ -2,7 +2,7 @@ import { ContactShadows, RoundedBox } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import type { Group, PointLight } from "three";
-import type { DiceColor, GraphicsQuality, Language } from "../../../app/settingsStore";
+import type { DiceColor, GraphicsQuality, Language, Theme } from "../../../app/settingsStore";
 import { DICE_SET_PALETTES, getDicePipColor } from "../appearance";
 import type { DicePhase, DieValue } from "../types";
 
@@ -159,7 +159,7 @@ function DiceTray({ color }: { color: DiceColor }) {
   );
 }
 
-function TableScene({ values, phase, cupAmount, flashEnabled, reducedMotion, diceColor }: { values: DieValue[]; phase: DicePhase; cupAmount: number; flashEnabled: boolean; reducedMotion: boolean; diceColor: DiceColor }) {
+function TableScene({ values, phase, cupAmount, flashEnabled, reducedMotion, diceColor, theme }: { values: DieValue[]; phase: DicePhase; cupAmount: number; flashEnabled: boolean; reducedMotion: boolean; diceColor: DiceColor; theme: Theme }) {
   const shaker = useRef<Group>(null);
   const flash = useRef<PointLight>(null);
   const shakeElapsed = useRef(0);
@@ -169,6 +169,9 @@ function TableScene({ values, phase, cupAmount, flashEnabled, reducedMotion, dic
     [-1.3, 0.94, -0.76], [0, 0.94, -1.02], [1.3, 0.94, -0.62], [-0.74, 0.94, 0.66], [0.74, 0.94, 0.7],
   ], []);
   const shaking = phase === "SHAKING" || phase === "SETTLING";
+  const daylight = theme === "light";
+  const stageBackground = daylight ? "#d8cec4" : "#2c2728";
+  const tableSurface = daylight ? "#a9978b" : "#4a3935";
 
   useEffect(() => {
     if (phase === "SHAKING") {
@@ -212,10 +215,10 @@ function TableScene({ values, phase, cupAmount, flashEnabled, reducedMotion, dic
 
   return (
     <>
-      <color attach="background" args={["#0e0d0f"]} />
-      <fog attach="fog" args={["#0e0d0f", 14, 27]} />
-      <ambientLight intensity={0.42} color="#fff4e6" />
-      <hemisphereLight args={["#dce7ff", "#120c0c", 0.85]} />
+      <color attach="background" args={[stageBackground]} />
+      <fog attach="fog" args={[stageBackground, 14, 27]} />
+      <ambientLight intensity={daylight ? 0.58 : 0.5} color="#fff4e6" />
+      <hemisphereLight args={["#dce7ff", daylight ? "#5e4840" : "#201516", daylight ? 1 : 0.9]} />
       <directionalLight position={[-5, 10, 7]} intensity={3.8} color="#fff1d7" castShadow shadow-mapSize={[1024, 1024]} />
       <pointLight position={[-4.5, 4.2, 2.5]} intensity={12} color={DICE_SET_PALETTES[diceColor].accent} distance={10} decay={2} />
       <pointLight position={[5, 5.5, -1.5]} intensity={11} color="#718eff" distance={12} decay={2} />
@@ -225,7 +228,7 @@ function TableScene({ values, phase, cupAmount, flashEnabled, reducedMotion, dic
 
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.18, 0]} receiveShadow>
         <circleGeometry args={[13, 72]} />
-        <meshStandardMaterial color="#211517" roughness={0.94} metalness={0.01} />
+        <meshStandardMaterial color={tableSurface} roughness={0.94} metalness={0.01} />
       </mesh>
 
       <group position={[compact ? -0.25 : -0.1, 0, 0]} scale={compact ? 1.02 : 1.3}>
@@ -236,7 +239,7 @@ function TableScene({ values, phase, cupAmount, flashEnabled, reducedMotion, dic
         </group>
       </group>
 
-      <ContactShadows position={[0, -0.12, 0]} opacity={0.7} scale={17} blur={2.5} far={9} />
+      <ContactShadows position={[0, -0.12, 0]} opacity={daylight ? 0.52 : 0.62} scale={17} blur={2.7} far={9} />
     </>
   );
 }
@@ -256,7 +259,7 @@ function CameraRig() {
 
 const getDpr = (quality: GraphicsQuality) => quality === "low" ? 1 : quality === "medium" ? 1.35 : quality === "high" ? 2 : Math.min(window.devicePixelRatio, 1.6);
 
-export function DiceScene({ values, phase, peekAmount, quality, flashEnabled, reducedMotion, language, diceColor }: { values: DieValue[]; phase: DicePhase; peekAmount: number; quality: GraphicsQuality; flashEnabled: boolean; reducedMotion: boolean; language: Language; diceColor: DiceColor }) {
+export function DiceScene({ values, phase, peekAmount, quality, flashEnabled, reducedMotion, language, diceColor, theme }: { values: DieValue[]; phase: DicePhase; peekAmount: number; quality: GraphicsQuality; flashEnabled: boolean; reducedMotion: boolean; language: Language; diceColor: DiceColor; theme: Theme }) {
   const openAmount = phase === "OPEN" ? 1 : phase === "PEEKING" ? peekAmount : 0;
   const animated = (phase === "SHAKING" || phase === "SETTLING") && !reducedMotion;
   return (
@@ -270,7 +273,7 @@ export function DiceScene({ values, phase, peekAmount, quality, flashEnabled, re
       aria-label={language === "vi" ? "Ống lắc xúc xắc hình trụ bóng, kèm khay tròn chứa năm viên xúc xắc ba chiều" : "A glossy cylindrical dice cup with a round tray containing five three-dimensional dice"}
     >
       <CameraRig />
-      <TableScene values={values} phase={phase} cupAmount={openAmount} flashEnabled={flashEnabled && !reducedMotion} reducedMotion={reducedMotion} diceColor={diceColor} />
+      <TableScene values={values} phase={phase} cupAmount={openAmount} flashEnabled={flashEnabled && !reducedMotion} reducedMotion={reducedMotion} diceColor={diceColor} theme={theme} />
     </Canvas>
   );
 }
