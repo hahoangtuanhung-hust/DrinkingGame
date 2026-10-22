@@ -22,9 +22,19 @@ test("shakes and reveals five stable dice", async ({ page }) => {
   await expect(page.locator(".dice-primary-control button")).toHaveCount(1);
 });
 
-test("switches the dice interface between English and Vietnamese", async ({ page }) => {
-  await page.goto("/DrinkingGame/#/dice");
+test("switches the whole site between English and Vietnamese", async ({ page }) => {
+  await page.goto("/DrinkingGame/#/");
   await page.getByRole("button", { name: "Chuyển sang tiếng Việt" }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Khuấy động");
+  await page.getByRole("link", { name: /Bắt đầu chia bài/i }).click();
+  await expect(page.getByRole("heading", { name: "Rút lá bài định mệnh." })).toBeVisible();
+  await page.getByRole("link", { name: /Sửa luật/i }).click();
+  await expect(page.getByRole("heading", { name: "Tạo luật của bạn." })).toBeVisible();
+  await expect(page.getByLabel("Tên luật")).toHaveValue("Nâng ly");
+  await page.getByRole("button", { name: "Mở cài đặt" }).click();
+  await expect(page.getByRole("dialog", { name: "Điều chỉnh trải nghiệm" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await page.goto("/DrinkingGame/#/dice");
   await expect(page.locator(".dice-primary-button")).toHaveAccessibleName("Lắc");
   await expect(page.getByRole("button", { name: "Switch to English" })).toBeVisible();
   await page.reload();

@@ -1,13 +1,11 @@
 import { Info, Smartphone, Sparkles, Volume2 } from "lucide-react";
-import { useLocation } from "react-router-dom";
 import { Modal } from "../components/ui/Modal";
 import { Toggle } from "../components/ui/Toggle";
 import { useSettingsStore, type GraphicsQuality } from "./settingsStore";
 
 export function GlobalModals() {
   const settings = useSettingsStore();
-  const location = useLocation();
-  const vi = location.pathname.startsWith("/dice") && settings.language === "vi";
+  const vi = settings.language === "vi";
   return (
     <>
       <Modal open={settings.settingsOpen} onClose={() => settings.setSettingsOpen(false)} title={vi ? "Điều chỉnh trải nghiệm" : "Set the mood"} eyebrow={vi ? "Cài đặt trò chơi" : "Game settings"} closeLabel={vi ? "Đóng hộp thoại" : "Close dialog"}>

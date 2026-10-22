@@ -1,6 +1,9 @@
 import { useRef, useState, type PointerEvent } from "react";
+import type { Language } from "../../../app/settingsStore";
+import { getCopy } from "../../../app/i18n";
 
-export function DeckStack({ remaining, disabled, onDraw }: { remaining: number; disabled: boolean; onDraw: () => void }) {
+export function DeckStack({ remaining, disabled, onDraw, language = "en" }: { remaining: number; disabled: boolean; onDraw: () => void; language?: Language }) {
+  const t = getCopy(language).cards;
   const origin = useRef<number | null>(null);
   const [offset, setOffset] = useState(0);
   const onPointerDown = (event: PointerEvent<HTMLButtonElement>) => {
@@ -18,10 +21,10 @@ export function DeckStack({ remaining, disabled, onDraw }: { remaining: number; 
     setOffset(0);
   };
   return (
-    <button className="deck-stack" disabled={disabled} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp} aria-label={`${remaining} cards remaining. Swipe or activate to draw.`}>
+    <button className="deck-stack" disabled={disabled} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp} aria-label={t.deckLabel(remaining)}>
       <span className="deck-layer deck-layer--three" /><span className="deck-layer deck-layer--two" /><span className="deck-layer deck-layer--one" />
       <span className="deck-top" style={{ transform: `translateX(${offset}px) rotate(${offset * 0.05}deg)` }}><span className="card-back-pattern"><span>AH</span></span></span>
-      <span className="deck-count"><strong>{remaining}</strong><small>cards left</small></span>
+      <span className="deck-count"><strong>{remaining}</strong><small>{t.cardsLeft}</small></span>
     </button>
   );
 }

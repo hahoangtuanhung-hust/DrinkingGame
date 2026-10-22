@@ -83,6 +83,18 @@ test.describe("automated mobile UI audit", () => {
     }
   });
 
+  test("Vietnamese copy remains overflow-free on a narrow phone", async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 760 });
+    await page.goto("/DrinkingGame/#/");
+    await page.getByRole("button", { name: "Chuyển sang tiếng Việt" }).click();
+    for (const route of routes) {
+      await page.goto(route);
+      await expect(page.locator("h1")).toHaveCount(1, { timeout: 15_000 });
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+      expect(overflow, `${route} Vietnamese copy overflows at 320px`).toBeLessThanOrEqual(1);
+    }
+  });
+
   test("mobile rule filters keep the editor close while preserving all 52 cards", async ({ page }) => {
     await page.goto("/DrinkingGame/#/cards/rules");
     await expect(page.locator(".rule-card-grid button")).toHaveCount(13);
