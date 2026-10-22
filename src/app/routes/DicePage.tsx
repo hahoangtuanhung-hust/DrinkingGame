@@ -2,6 +2,7 @@ import { Dices, Eye } from "lucide-react";
 import { lazy, Suspense, useCallback, useEffect, useRef, type PointerEvent } from "react";
 import { useSettingsStore } from "../settingsStore";
 import { soundEngine } from "../../lib/audio";
+import { deviceEffects } from "../../lib/deviceEffects";
 import { useDiceStore } from "../../features/dice/store/diceStore";
 import { getDiceShakeTimeline } from "../../features/dice/motion";
 
@@ -26,16 +27,17 @@ export default function DicePage() {
     timers.current.forEach(window.clearTimeout);
     timers.current = [];
     const timeline = getDiceShakeTimeline(settings.reducedMotion);
-    if (settings.soundEnabled) soundEngine.play("shake", settings.volume, (timeline.activeMs + timeline.settleMs) / 1_000);
-    if (settings.vibrationEnabled && "vibrate" in navigator) navigator.vibrate([24, 18, 28, 18, 24]);
+    if (settings.soundEnabled) void soundEngine.play("shake", settings.volume, (timeline.activeMs + timeline.settleMs) / 1_000);
+    if (settings.vibrationEnabled) deviceEffects.vibrate([24, 18, 28, 18, 24]);
+    if (settings.torchEnabled) void deviceEffects.pulseTorch(timeline.activeMs + timeline.settleMs);
     timers.current.push(window.setTimeout(() => {
       dice.settle();
-      if (settings.soundEnabled) soundEngine.play("settle", settings.volume);
+      if (settings.soundEnabled) void soundEngine.play("settle", settings.volume);
       timers.current.push(window.setTimeout(() => dice.concealResult(), timeline.settleMs));
     }, timeline.activeMs));
-  }, [dice, settings.soundEnabled, settings.volume, settings.vibrationEnabled, settings.reducedMotion]);
+  }, [dice, settings.soundEnabled, settings.volume, settings.vibrationEnabled, settings.torchEnabled, settings.reducedMotion]);
 
-  const open = () => { dice.open(); if (settings.soundEnabled) soundEngine.play("open", settings.volume); };
+  const open = () => { dice.open(); if (settings.soundEnabled) void soundEngine.play("open", settings.volume); };
   const primaryAction = shouldOpen ? open : shake;
 
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
@@ -69,7 +71,7 @@ export default function DicePage() {
       <h1 className="sr-only">{vi ? "Bộ lắc năm viên xúc xắc 3D" : "Five-dice 3D shaker"}</h1>
       <p className="sr-only" role="status" aria-live="polite">{statusLabel}</p>
       <section className="dice-layout">
-        <div className={`dice-stage ${busy ? "is-shaking" : ""}`} data-dice-color={settings.diceColor} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
+        <div className={`dice-stage ${busy ? "is-shaking" : ""} ${busy && settings.flashEnabled && !settings.reducedMotion ? "is-light-pulsing" : ""}`} data-dice-color={settings.diceColor} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
           <Suspense fallback={<div className="scene-loader"><span /><p>{vi ? "Đang dựng bàn…" : "Lighting the table…"}</p></div>}><DiceScene values={dice.values} phase={dice.phase} peekAmount={dice.peekAmount} quality={settings.graphicsQuality} flashEnabled={settings.flashEnabled} reducedMotion={settings.reducedMotion} language={settings.language} diceColor={settings.diceColor} theme={settings.theme} /></Suspense>
         </div>
         <div className="dice-primary-control">

@@ -3,6 +3,14 @@ type SoundName = "tap" | "draw" | "flip" | "shake" | "settle" | "open" | "close"
 class SoundEngine {
   private context: AudioContext | null = null;
 
+  private primeContext(context: AudioContext) {
+    const buffer = context.createBuffer(1, 1, context.sampleRate);
+    const source = context.createBufferSource();
+    source.buffer = buffer;
+    source.connect(context.destination);
+    source.start(0);
+  }
+
   private playDiceShake(context: AudioContext, now: number, volume: number, requestedDuration = 2) {
     const duration = Math.max(0.18, requestedDuration);
     const master = context.createGain();
@@ -13,8 +21,8 @@ class SoundEngine {
     compressor.attack.setValueAtTime(0.003, now);
     compressor.release.setValueAtTime(0.12, now);
     master.gain.setValueAtTime(0.0001, now);
-    master.gain.exponentialRampToValueAtTime(Math.max(0.0001, volume * 0.62), now + 0.018);
-    master.gain.setValueAtTime(Math.max(0.0001, volume * 0.58), now + Math.max(0.06, duration - 0.28));
+    master.gain.exponentialRampToValueAtTime(Math.max(0.0001, volume * 0.78), now + 0.018);
+    master.gain.setValueAtTime(Math.max(0.0001, volume * 0.72), now + Math.max(0.06, duration - 0.28));
     master.gain.exponentialRampToValueAtTime(0.0001, now + duration);
     master.connect(compressor).connect(context.destination);
 
@@ -77,24 +85,36 @@ class SoundEngine {
     });
   }
 
-  private ensureContext() {
+  private async ensureContext() {
     const AudioContextClass = window.AudioContext ??
       (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!AudioContextClass) return null;
     this.context ??= new AudioContextClass();
-    if (this.context.state === "suspended") void this.context.resume();
-    return this.context;
+    const context = this.context;
+    try {
+      if (context.state !== "running") {
+        this.primeContext(context);
+        await context.resume();
+      }
+      return context.state === "running" ? context : null;
+    } catch {
+      return null;
+    }
   }
 
-  play(name: SoundName, volume: number, shakeDuration?: number) {
-    if (volume <= 0) return;
-    const context = this.ensureContext();
-    if (!context) return;
+  async unlock() {
+    return Boolean(await this.ensureContext());
+  }
+
+  async play(name: SoundName, volume: number, shakeDuration?: number) {
+    if (volume <= 0) return false;
+    const context = await this.ensureContext();
+    if (!context) return false;
     const now = context.currentTime;
 
     if (name === "shake") {
       this.playDiceShake(context, now, volume, shakeDuration);
-      return;
+      return true;
     }
 
     const gain = context.createGain();
@@ -117,6 +137,7 @@ class SoundEngine {
     oscillator.connect(gain);
     oscillator.start(now);
     oscillator.stop(now + duration);
+    return true;
   }
 }
 

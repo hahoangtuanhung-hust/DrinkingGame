@@ -3,6 +3,7 @@ import { useEffect, useLayoutEffect, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { getCopy } from "../../app/i18n";
 import { useSettingsStore } from "../../app/settingsStore";
+import { soundEngine } from "../../lib/audio";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const location = useLocation();
@@ -40,7 +41,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <button className="icon-button theme-toggle" onClick={() => setSetting("theme", theme === "dark" ? "light" : "dark")} aria-label={theme === "dark" ? (vi ? "Chuyển sang giao diện sáng" : "Switch to light theme") : (vi ? "Chuyển sang giao diện tối" : "Switch to dark theme")}>
             {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
           </button>
-          <button className="icon-button" onClick={() => setSetting("soundEnabled", !soundEnabled)} aria-label={soundEnabled ? (vi ? "Tắt âm thanh" : "Mute sound") : (vi ? "Bật âm thanh" : "Enable sound")}>
+          <button className="icon-button" onClick={() => { const enabled = !soundEnabled; setSetting("soundEnabled", enabled); if (enabled) void soundEngine.unlock(); }} aria-label={soundEnabled ? (vi ? "Tắt âm thanh" : "Mute sound") : (vi ? "Bật âm thanh" : "Enable sound")}>
             {soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
           </button>
           <button className="icon-button" onClick={() => setHelpOpen(true)} aria-label={vi ? "Mở hướng dẫn" : "Open help"}><CircleHelp size={18} /></button>
