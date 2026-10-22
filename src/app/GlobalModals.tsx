@@ -10,6 +10,7 @@ export function GlobalModals() {
     <>
       <Modal open={settings.settingsOpen} onClose={() => settings.setSettingsOpen(false)} title={vi ? "Điều chỉnh trải nghiệm" : "Set the mood"} eyebrow={vi ? "Cài đặt trò chơi" : "Game settings"} closeLabel={vi ? "Đóng hộp thoại" : "Close dialog"}>
         <div className="settings-list">
+          <Toggle checked={settings.theme === "light"} onChange={(value) => settings.setSetting("theme", value ? "light" : "dark")} label={vi ? "Giao diện sáng" : "Light theme"} description={vi ? "Chuyển giữa không gian sáng và tối" : "Switch between daylight and after-hours styling"} />
           <Toggle checked={settings.soundEnabled} onChange={(value) => settings.setSetting("soundEnabled", value)} label={vi ? "Hiệu ứng âm thanh" : "Sound effects"} description={vi ? "Âm thanh bàn chơi được tổng hợp nhẹ nhàng" : "Soft, synthesized tabletop audio"} />
           {settings.soundEnabled && <label className="range-row"><span><strong>{vi ? "Âm lượng" : "Volume"}</strong><small>{Math.round(settings.volume * 100)}%</small></span><input aria-label={vi ? "Âm lượng" : "Volume"} type="range" min="0" max="1" step="0.05" value={settings.volume} onChange={(e) => settings.setSetting("volume", Number(e.target.value))} /></label>}
           <Toggle checked={settings.vibrationEnabled} onChange={(value) => settings.setSetting("vibrationEnabled", value)} label={vi ? "Rung phản hồi" : "Haptics"} description={vi ? "Rung ngắn sau thao tác chủ động" : "Short vibration after intentional actions"} />

@@ -44,3 +44,18 @@ test("switches the whole site between English and Vietnamese", async ({ page }) 
   await page.reload();
   await expect(page.locator(".dice-primary-button")).toHaveAccessibleName("Lắc");
 });
+
+test("switches between light and dark themes and remembers the choice", async ({ page }) => {
+  await page.goto("/DrinkingGame/#/");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await page.getByRole("button", { name: "Switch to light theme" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#f5efe6");
+  await page.getByRole("button", { name: "Open settings" }).click();
+  await expect(page.getByRole("checkbox", { name: /Light theme/i })).toBeChecked();
+  await page.keyboard.press("Escape");
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await page.getByRole("button", { name: "Switch to dark theme" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+});

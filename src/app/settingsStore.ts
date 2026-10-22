@@ -5,6 +5,7 @@ import { safeLocalStorage } from "../lib/storage";
 
 export type GraphicsQuality = "auto" | "low" | "medium" | "high";
 export type Language = "en" | "vi";
+export type Theme = "dark" | "light";
 
 const SettingsSchema = z.object({
   soundEnabled: z.boolean(),
@@ -14,6 +15,7 @@ const SettingsSchema = z.object({
   reducedMotion: z.boolean(),
   graphicsQuality: z.enum(["auto", "low", "medium", "high"]),
   language: z.enum(["en", "vi"]).default("en"),
+  theme: z.enum(["dark", "light"]).default("dark"),
 });
 
 type SettingsState = z.infer<typeof SettingsSchema> & {
@@ -32,6 +34,7 @@ const defaults = {
   reducedMotion: typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches,
   graphicsQuality: "auto" as GraphicsQuality,
   language: "en" as Language,
+  theme: "dark" as Theme,
 };
 
 export const useSettingsStore = create<SettingsState>()(

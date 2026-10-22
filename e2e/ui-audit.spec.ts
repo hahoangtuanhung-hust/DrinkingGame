@@ -95,6 +95,25 @@ test.describe("automated mobile UI audit", () => {
     }
   });
 
+  test("light theme remains readable and overflow-free on every route", async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 760 });
+    await page.goto("/DrinkingGame/#/");
+    await page.getByRole("button", { name: "Switch to light theme" }).click();
+    for (const route of routes) {
+      await page.goto(route);
+      await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+      await expect(page.locator("h1")).toHaveCount(1, { timeout: 15_000 });
+      const report = await page.evaluate(() => ({
+        overflow: document.documentElement.scrollWidth - window.innerWidth,
+        background: getComputedStyle(document.body).backgroundImage,
+        color: getComputedStyle(document.documentElement).color,
+      }));
+      expect(report.overflow, `${route} light theme overflows at 320px`).toBeLessThanOrEqual(1);
+      expect(report.background).toContain("rgb(255, 253, 248)");
+      expect(report.color).toBe("rgb(44, 33, 27)");
+    }
+  });
+
   test("mobile rule filters keep the editor close while preserving all 52 cards", async ({ page }) => {
     await page.goto("/DrinkingGame/#/cards/rules");
     await expect(page.locator(".rule-card-grid button")).toHaveCount(13);
