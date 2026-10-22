@@ -12,7 +12,7 @@ export default function DicePage() {
   const dice = useDiceStore();
   const settings = useSettingsStore();
   const timers = useRef<number[]>([]);
-  const gesture = useRef({ active: false, startX: 0, startY: 0, lastX: 0, lastDirection: 0, reversals: 0, travel: 0 });
+  const gesture = useRef({ active: false, peeking: false, startX: 0, startY: 0, lastX: 0, lastDirection: 0, reversals: 0, travel: 0 });
   const busy = dice.phase === "SHAKING" || dice.phase === "SETTLING";
   const shouldOpen = dice.phase === "CLOSED_RESULT";
   const vi = settings.language === "vi";
@@ -42,7 +42,7 @@ export default function DicePage() {
 
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     if (busy) return;
-    gesture.current = { active: true, startX: event.clientX, startY: event.clientY, lastX: event.clientX, lastDirection: 0, reversals: 0, travel: 0 };
+    gesture.current = { active: true, peeking: false, startX: event.clientX, startY: event.clientY, lastX: event.clientX, lastDirection: 0, reversals: 0, travel: 0 };
     event.currentTarget.setPointerCapture(event.pointerId);
   };
   const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
@@ -56,13 +56,17 @@ export default function DicePage() {
     current.lastX = event.clientX;
     const vertical = current.startY - event.clientY;
     const horizontal = Math.abs(event.clientX - current.startX);
-    if (vertical > 4 && vertical > horizontal * 0.55) dice.setPeek(vertical / 190);
+    if (vertical > 4 && vertical > horizontal * 0.55) {
+      current.peeking = true;
+      dice.setPeek(vertical / 190);
+    }
   };
   const onPointerUp = () => {
     const current = gesture.current;
     if (!current.active) return;
     current.active = false;
-    if (current.travel > 175 && current.reversals >= 2 && dice.phase !== "OPEN") shake();
+    if (current.peeking) dice.releasePeek();
+    else if (current.travel > 175 && current.reversals >= 2 && dice.phase !== "OPEN") shake();
     else dice.releasePeek();
   };
 

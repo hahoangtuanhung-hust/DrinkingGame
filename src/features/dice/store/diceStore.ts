@@ -67,8 +67,7 @@ export const useDiceStore = create<DiceState>()(
       releasePeek: () => {
         const state = get();
         if (state.phase !== "PEEKING") return;
-        if (state.peekAmount >= 0.56 && canTransition("PEEKING", "OPEN")) set({ phase: "OPEN", peekAmount: 1 });
-        else set({ phase: nextClosedPhase(state.hasResult), peekAmount: 0 });
+        set({ phase: nextClosedPhase(state.hasResult), peekAmount: 0 });
       },
       open: () => {
         const state = get();

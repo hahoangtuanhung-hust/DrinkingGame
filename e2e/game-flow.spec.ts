@@ -35,6 +35,15 @@ test("shakes and reveals five stable dice", async ({ page }) => {
   });
   expect(shakeDuration).toBeGreaterThanOrEqual(1_900);
   await expect(page.locator(".dice-status, .gesture-hint, .shake-meter")).toHaveCount(0);
+  const stageBox = await page.locator(".dice-stage").boundingBox();
+  if (!stageBox) throw new Error("Dice stage is not visible");
+  const peekX = stageBox.x + stageBox.width / 2;
+  const peekY = stageBox.y + stageBox.height / 2;
+  await page.mouse.move(peekX, peekY);
+  await page.mouse.down();
+  await page.mouse.move(peekX, peekY - Math.min(150, stageBox.height * 0.35), { steps: 8 });
+  await page.mouse.up();
+  await expect(actionButton).toHaveAccessibleName("Open");
   await openButton.click();
   await expect(actionButton).toHaveAccessibleName("Shake");
   await expect(page.getByText("Total", { exact: true })).toHaveCount(0);
