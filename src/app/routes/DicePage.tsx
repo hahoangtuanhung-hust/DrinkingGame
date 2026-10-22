@@ -3,6 +3,7 @@ import { lazy, Suspense, useCallback, useEffect, useRef, type PointerEvent } fro
 import { useSettingsStore } from "../settingsStore";
 import { soundEngine } from "../../lib/audio";
 import { useDiceStore } from "../../features/dice/store/diceStore";
+import { getDiceShakeTimeline } from "../../features/dice/motion";
 
 const DiceScene = lazy(() => import("../../features/dice/scene/DiceScene").then((module) => ({ default: module.DiceScene })));
 
@@ -24,14 +25,14 @@ export default function DicePage() {
     if (!dice.shake()) return;
     timers.current.forEach(window.clearTimeout);
     timers.current = [];
-    if (settings.soundEnabled) soundEngine.play("shake", settings.volume);
+    const timeline = getDiceShakeTimeline(settings.reducedMotion);
+    if (settings.soundEnabled) soundEngine.play("shake", settings.volume, (timeline.activeMs + timeline.settleMs) / 1_000);
     if (settings.vibrationEnabled && "vibrate" in navigator) navigator.vibrate([24, 18, 28, 18, 24]);
-    const shakeDuration = settings.reducedMotion ? 120 : 920;
     timers.current.push(window.setTimeout(() => {
       dice.settle();
       if (settings.soundEnabled) soundEngine.play("settle", settings.volume);
-      timers.current.push(window.setTimeout(() => dice.concealResult(), settings.reducedMotion ? 100 : 420));
-    }, shakeDuration));
+      timers.current.push(window.setTimeout(() => dice.concealResult(), timeline.settleMs));
+    }, timeline.activeMs));
   }, [dice, settings.soundEnabled, settings.volume, settings.vibrationEnabled, settings.reducedMotion]);
 
   const open = () => { dice.open(); if (settings.soundEnabled) soundEngine.play("open", settings.volume); };

@@ -12,9 +12,13 @@ test("shakes and reveals five stable dice", async ({ page }) => {
   await page.goto("/DrinkingGame/#/dice");
   const actionButton = page.locator(".dice-primary-button");
   await expect(actionButton).toHaveAccessibleName("Shake");
+  const shakeStartedAt = Date.now();
   await actionButton.click();
+  await page.waitForTimeout(1_500);
+  await expect(actionButton).toBeDisabled();
   const openButton = page.getByRole("button", { name: "Open", exact: true });
   await expect(openButton).toBeEnabled({ timeout: 10_000 });
+  expect(Date.now() - shakeStartedAt).toBeGreaterThanOrEqual(1_900);
   await expect(page.locator(".dice-status, .gesture-hint, .shake-meter")).toHaveCount(0);
   await openButton.click();
   await expect(actionButton).toHaveAccessibleName("Shake");

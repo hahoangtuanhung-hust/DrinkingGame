@@ -3,8 +3,8 @@ type SoundName = "tap" | "draw" | "flip" | "shake" | "settle" | "open" | "close"
 class SoundEngine {
   private context: AudioContext | null = null;
 
-  private playDiceShake(context: AudioContext, now: number, volume: number) {
-    const duration = 0.92;
+  private playDiceShake(context: AudioContext, now: number, volume: number, requestedDuration = 2) {
+    const duration = Math.max(0.18, requestedDuration);
     const master = context.createGain();
     const compressor = context.createDynamicsCompressor();
     compressor.threshold.setValueAtTime(-18, now);
@@ -14,7 +14,7 @@ class SoundEngine {
     compressor.release.setValueAtTime(0.12, now);
     master.gain.setValueAtTime(0.0001, now);
     master.gain.exponentialRampToValueAtTime(Math.max(0.0001, volume * 0.62), now + 0.018);
-    master.gain.setValueAtTime(Math.max(0.0001, volume * 0.58), now + 0.72);
+    master.gain.setValueAtTime(Math.max(0.0001, volume * 0.58), now + Math.max(0.06, duration - 0.28));
     master.gain.exponentialRampToValueAtTime(0.0001, now + duration);
     master.connect(compressor).connect(context.destination);
 
@@ -24,7 +24,7 @@ class SoundEngine {
     for (let i = 0; i < data.length; i += 1) {
       const seconds = i / context.sampleRate;
       const edgeFade = Math.min(1, seconds / 0.025, (duration - seconds) / 0.08);
-      const movement = Math.pow(Math.abs(Math.sin(seconds * Math.PI * 9.6)), 5);
+      const movement = Math.pow(Math.abs(Math.sin(seconds * Math.PI * 13.6)), 5);
       data[i] = (Math.random() * 2 - 1) * (0.035 + movement * 0.2) * Math.max(0, edgeFade);
     }
     const scrape = context.createBufferSource();
@@ -41,7 +41,8 @@ class SoundEngine {
     scrape.stop(now + duration);
 
     // Alternating, slightly irregular impacts mimic five dice striking opposite cup walls.
-    const impacts = [0.025, 0.105, 0.19, 0.275, 0.37, 0.455, 0.55, 0.645, 0.74, 0.825];
+    const impactCount = Math.max(2, Math.floor((duration - 0.035) / 0.082));
+    const impacts = Array.from({ length: impactCount }, (_, index) => 0.025 + index * 0.082);
     impacts.forEach((offset, index) => {
       const hitAt = now + offset + (Math.random() - 0.5) * 0.014;
       const side = index % 2 === 0 ? -0.62 : 0.62;
@@ -85,14 +86,14 @@ class SoundEngine {
     return this.context;
   }
 
-  play(name: SoundName, volume: number) {
+  play(name: SoundName, volume: number, shakeDuration?: number) {
     if (volume <= 0) return;
     const context = this.ensureContext();
     if (!context) return;
     const now = context.currentTime;
 
     if (name === "shake") {
-      this.playDiceShake(context, now, volume);
+      this.playDiceShake(context, now, volume, shakeDuration);
       return;
     }
 

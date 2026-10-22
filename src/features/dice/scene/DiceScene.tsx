@@ -1,6 +1,6 @@
 import { ContactShadows, RoundedBox } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import type { Group, PointLight } from "three";
 import type { GraphicsQuality, Language } from "../../../app/settingsStore";
 import type { DicePhase, DieValue } from "../types";
@@ -160,31 +160,51 @@ function DiceTray() {
 function TableScene({ values, phase, cupAmount, flashEnabled, reducedMotion }: { values: DieValue[]; phase: DicePhase; cupAmount: number; flashEnabled: boolean; reducedMotion: boolean }) {
   const shaker = useRef<Group>(null);
   const flash = useRef<PointLight>(null);
+  const shakeElapsed = useRef(0);
+  const settleElapsed = useRef(0);
   const compact = useThree((state) => state.size.width < 640);
   const positions = useMemo<[number, number, number][]>(() => [
     [-1.3, 0.94, -0.76], [0, 0.94, -1.02], [1.3, 0.94, -0.62], [-0.74, 0.94, 0.66], [0.74, 0.94, 0.7],
   ], []);
   const shaking = phase === "SHAKING" || phase === "SETTLING";
 
-  useFrame(({ clock }) => {
+  useEffect(() => {
+    if (phase === "SHAKING") {
+      shakeElapsed.current = 0;
+      settleElapsed.current = 0;
+    } else if (phase === "SETTLING") {
+      settleElapsed.current = 0;
+    }
+  }, [phase]);
+
+  useFrame((_, delta) => {
     if (!shaker.current) return;
     if (shaking) {
-      const t = clock.elapsedTime;
-      const strength = phase === "SETTLING" ? 0.17 : compact ? 0.52 : 0.46;
-      const sideways = Math.sin(t * 29) + Math.sin(t * 47) * 0.16;
-      shaker.current.position.x = sideways * strength;
-      shaker.current.position.y = Math.abs(Math.sin(t * 29)) * strength * 0.055;
-      shaker.current.position.z = Math.cos(t * 17) * strength * 0.08;
-      shaker.current.rotation.y = Math.sin(t * 19) * strength * 0.05;
-      shaker.current.rotation.z = -sideways * strength * 0.075;
-      if (flash.current) flash.current.intensity = flashEnabled ? 4 + Math.max(0, Math.sin(t * 16)) * 8 : 0;
+      const frameDelta = Math.min(delta, 0.05);
+      shakeElapsed.current += frameDelta;
+      if (phase === "SETTLING") settleElapsed.current += frameDelta;
+      const t = shakeElapsed.current;
+      const attack = Math.min(1, t / 0.13);
+      const settleProgress = phase === "SETTLING" ? Math.min(1, settleElapsed.current / 0.32) : 0;
+      const envelope = attack * (phase === "SETTLING" ? Math.pow(1 - settleProgress, 2) : 1);
+      const baseStrength = compact ? 0.78 : 0.66;
+      const sideways = Math.sin(t * Math.PI * 13.6) + Math.sin(t * Math.PI * 23) * 0.16;
+      const recoil = Math.sin(t * Math.PI * 6.8 + 0.7) * 0.1;
+      const strength = baseStrength * envelope;
+      shaker.current.position.x = (sideways + recoil) * strength;
+      shaker.current.position.y = Math.pow(Math.abs(Math.sin(t * Math.PI * 13.6)), 2) * strength * 0.065;
+      shaker.current.position.z = Math.sin(t * Math.PI * 8.2) * strength * 0.11;
+      shaker.current.rotation.y = Math.sin(t * Math.PI * 8.2) * strength * 0.035;
+      shaker.current.rotation.z = -sideways * strength * 0.085;
+      if (flash.current) flash.current.intensity = flashEnabled ? envelope * (4 + Math.max(0, Math.sin(t * Math.PI * 9)) * 8) : 0;
     } else {
-      shaker.current.position.x *= 0.82;
-      shaker.current.position.y *= 0.82;
-      shaker.current.position.z *= 0.82;
-      shaker.current.rotation.y *= 0.82;
-      shaker.current.rotation.z *= 0.82;
-      if (flash.current) flash.current.intensity *= 0.78;
+      const recovery = 1 - Math.exp(-delta * 14);
+      shaker.current.position.x += (0 - shaker.current.position.x) * recovery;
+      shaker.current.position.y += (0 - shaker.current.position.y) * recovery;
+      shaker.current.position.z += (0 - shaker.current.position.z) * recovery;
+      shaker.current.rotation.y += (0 - shaker.current.rotation.y) * recovery;
+      shaker.current.rotation.z += (0 - shaker.current.rotation.z) * recovery;
+      if (flash.current) flash.current.intensity += (0 - flash.current.intensity) * recovery;
     }
   });
 
